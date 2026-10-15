@@ -1,0 +1,10 @@
+:root {
+  --bg-0: #000000; --bg-1: #030d07; --bg-2: #061a0f; --line: #0f3d22;
+  --green: #00ff41; --green-dim: #2fbf5a; --green-dark: #0a5c2a; --head: #d6ffe0;
+  --amber: #ffb000; --red: #ff4d4d; --text: #b8ffc9;
+  --font-ui: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --font-title: 'VT323', 'JetBrains Mono', monospace;
+  --font-rain: 'Kana', 'JetBrains Mono', monospace;
+  --glow: 0 0 6px rgba(0, 255, 65, .45);
+  --touch: 44px;
+}
