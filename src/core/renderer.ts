@@ -59,6 +59,9 @@ export class AsciiRenderer {
   setSource(src: CanvasImageSource, w: number, h: number): void {
     this.src = src; this.srcW = Math.max(1, w); this.srcH = Math.max(1, h); this.srcDirty = true;
   }
+  getSource(): { src: CanvasImageSource; w: number; h: number } | null {
+    return this.src ? { src: this.src, w: this.srcW, h: this.srcH } : null;
+  }
   /** Força nova amostragem (fonte mutável, ex.: canvas ou vídeo). */
   invalidateSource(): void { this.srcDirty = true; }
 

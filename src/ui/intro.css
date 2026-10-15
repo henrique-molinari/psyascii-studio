@@ -1,0 +1,26 @@
+/* Abertura e fundo ambiente */
+.intro-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--bg-0); color: var(--green); font-family: var(--font-ui); transition: opacity .35s ease; }
+.intro-overlay.is-revealing { background: transparent; }
+.intro-overlay.is-ending { opacity: 0; pointer-events: none; }
+.intro-canvas, .ambient-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.ambient-canvas { z-index: 0; pointer-events: none; }
+.intro-boot { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: min(90vw, 28rem); padding: 1rem 1.25rem; background: rgba(0, 0, 0, .78); border: 1px solid var(--line); text-shadow: var(--glow); line-height: 1.7; }
+.intro-boot:empty { display: none; }
+.intro-overlay.is-revealing .intro-boot { opacity: 0; transition: opacity .3s; }
+.typing-cursor { animation: intro-blink 1s steps(1) infinite; }
+@keyframes intro-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+.intro-scan { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--green); box-shadow: 0 0 14px 4px rgba(0, 255, 65, .5); opacity: 0; pointer-events: none; }
+.intro-overlay.is-revealing .intro-scan { animation: intro-scan 1.1s linear forwards; }
+@keyframes intro-scan { 0% { top: 0; opacity: .9; } 100% { top: 100%; opacity: 0; } }
+.intro-warning { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 34rem); padding: 1.5rem; background: rgba(0, 0, 0, .9); border: 1px solid var(--green-dark); box-shadow: var(--glow); text-align: center; }
+.intro-warning h2 { margin: 0 0 .75rem; font-family: var(--font-title); font-size: 1.75rem; font-weight: 400; color: var(--amber); }
+.intro-warning p { margin: 0 0 1.25rem; color: var(--text); line-height: 1.55; }
+.intro-btn { min-height: var(--touch); min-width: var(--touch); padding: 0 1.25rem; background: var(--bg-1); color: var(--green); border: 1px solid var(--green-dark); font: inherit; cursor: pointer; }
+.intro-btn:hover { background: var(--bg-2); box-shadow: var(--glow); }
+.intro-btn:focus-visible { outline: 2px solid var(--head); outline-offset: 2px; }
+.intro-skip { position: absolute; right: 1rem; bottom: 1rem; }
+.intro-skip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .typing-cursor { animation: none; }
+  .intro-overlay.is-revealing .intro-scan { animation: none; }
+}

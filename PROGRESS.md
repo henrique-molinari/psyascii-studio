@@ -30,3 +30,5 @@ Módulos: src/core/{types,tone,charsets,atlas,sampler,color,renderer,loop}.ts, s
 
 ## Fases
 - Fase 0: feita (commit). Fase 1: núcleo escrito, build ok; validador F1 apontou (a corrigir): [F3 em main.ts] atalhos disparam em TEXTAREA/SELECT, pagehide/bfcache, ImageBitmap antigo sem close(), pipeline não ligado; [F5] sampler getImageData aloca por chamada, canvas gigante (cols 300 × DPR 2) precisa limite de área, 1 drawImage/célula (gargalo), input sem limite de pixels, export limita só o lado (limitar área), urls morto em input.ts.
+- Ponteiro ptr é NORMALIZADO 0..1 (main.ts -> renderer -> fx). Interact = WarpEffect id "interact" em distort.ts; reveal em post.ts via setRevealSource.
+- Validador F2 (corrigir na F5): grain troca offset a 12 Hz → ≤3 Hz (regra 8); feedback prev não zera quando cols×rows trocam com mesmo produto; rain grava glyphOverride com mix=0; NaN em warps (cellAspect=0) → guarda no renderer; createPipeline.dispose vazio (zerar estado de módulo); jitter/glitch com folga (≤2,5/s); ensureAtlas faz join por quadro; túnel ignora mask.

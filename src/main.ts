@@ -1,130 +1,196 @@
-// Ligação principal: store + renderer + loop + entrada + exportação.
+// Ligação principal: store + renderer + loop + entrada + painel + abertura.
 import './style.css';
 import { AsciiRenderer } from './core/renderer';
 import { createLoop } from './core/loop';
+import { defaultParams } from './core/types';
 import { createStore } from './ui/store';
+import { createPanel } from './ui/panel';
+import { randomizeParams } from './ui/presets';
+import { getPrefs, setPrefs, subscribe as subPrefs, reducedMotion } from './ui/prefs';
+import { runIntro } from './ui/intro';
+import { createAmbient } from './ui/ambient';
+import { mountSettings } from './ui/settings';
+import { createViewport } from './ui/viewport';
+import { createShortcuts } from './ui/shortcuts';
 import { setupInput } from './io/input';
 import type { LoadedImage } from './io/input';
 import { exportPng, exportTxt, copyText } from './io/export';
+import { recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from './io/recipes';
+import { createPipeline } from './fx';
+import { setRevealSource } from './fx/post';
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
   if (!el) throw new Error(`#${id} ausente`);
   return el as T;
 };
-
 const canvas = $<HTMLCanvasElement>('cv');
-const msg = $('msg');
-const title = $('title');
-const bPause = $<HTMLButtonElement>('b-pause');
-const rCols = $<HTMLInputElement>('r-cols');
-const oCols = $('o-cols');
+const msg = $('msg'), title = $('title'), bPause = $<HTMLButtonElement>('b-pause');
+const side = $('side'), bDrawer = $<HTMLButtonElement>('b-drawer'), fpsEl = $('fps'), empty = $('empty'), app = $('app');
 
-const store = createStore();
-const renderer = new AsciiRenderer(canvas);
-const ptr = { x: 0, y: 0, down: false, active: false };
-let hasImage = false;
 let msgTimer = 0;
-
 function say(text: string, err = false): void {
   msg.textContent = text;
   msg.className = err ? 'msg err' : 'msg';
   msg.hidden = false;
   clearTimeout(msgTimer);
-  msgTimer = window.setTimeout(() => { msg.hidden = true; }, 4500);
+  msgTimer = window.setTimeout(() => { msg.hidden = true; }, 5000);
 }
+
+// Renderer: se o pipeline de efeitos falhar, segue só com o núcleo.
+let renderer: AsciiRenderer;
+let startupWarn = '';
+try { renderer = new AsciiRenderer(canvas, createPipeline()); }
+catch {
+  startupWarn = 'AVISO: efeitos indisponíveis neste navegador (modo básico)';
+  try { renderer = new AsciiRenderer(canvas); }
+  catch { throw new Error('canvas 2D indisponível'); }
+}
+setRevealSource(() => renderer.getSource());
+
+// Estado inicial: receita da hash (inválida mantém o padrão).
+const hash = location.hash;
+const fromHash = recipeFromHash(hash);
+if (/^#r=/.test(hash) && !fromHash) startupWarn = 'ERRO: receita do link inválida (usando padrão)';
+const store = createStore(fromHash ?? defaultParams());
+const ptr = { x: 0, y: 0, down: false, active: false };
+let hasImage = false, curSource: CanvasImageSource | null = null, lastT = 0;
 
 function setImage(img: LoadedImage): void {
+  const prev = curSource;
   renderer.setSource(img.source, img.w, img.h);
+  curSource = img.source;
+  if (prev && prev !== img.source && typeof ImageBitmap !== 'undefined' && prev instanceof ImageBitmap) prev.close();
   renderer.setParams(store.get());
   hasImage = true;
+  empty.hidden = true;
+  view.reset();
   title.textContent = `[ canvas ] ${img.w}x${img.h}px -> ${store.get().cols} colunas`;
+  renderOnce();
   say('OK: imagem carregada');
 }
+const input = setupInput({ dropTarget: document.body, onImage: setImage, onError: (m) => say(m, true) });
 
-const input = setupInput({
-  dropTarget: document.body,
-  onImage: setImage,
-  onError: (m) => say(m, true),
-});
-
+// FPS opcional (atualiza a cada 0,5 s).
+let frames = 0, fpsT = 0;
 const loop = createLoop((t, dt) => {
-  if (hasImage) renderer.frame(t, dt, ptr);
+  lastT = t;
+  if (!hasImage) return;
+  renderer.frame(t, dt, ptr);
+  frames++;
+  if (getPrefs().fps && t - fpsT >= 0.5) { fpsEl.textContent = `${Math.round(frames / (t - fpsT))} FPS`; frames = 0; fpsT = t; }
 });
+function renderOnce(): void { if (hasImage && loop.paused) renderer.frame(lastT, 0, ptr); }
 
 function syncPause(): void {
-  const paused = !loopRunning;
-  bPause.textContent = paused ? 'RETOMAR' : 'PAUSAR';
-  bPause.setAttribute('aria-pressed', String(paused));
+  bPause.textContent = loop.paused ? 'RETOMAR' : 'PAUSAR';
+  bPause.setAttribute('aria-pressed', String(loop.paused));
 }
-let loopRunning = true;
-function togglePause(): void {
-  loop.toggle();
-  loopRunning = !loopRunning;
-  syncPause();
+function togglePause(): void { loop.toggle(); syncPause(); }
+
+const needImage = (): boolean => { if (!hasImage) say('ERRO: carregue uma imagem primeiro', true); return hasImage; };
+function applyParams(p: ReturnType<typeof defaultParams>): void { store.set(p); store.commit(); }
+function refreshRecipes(): void { panel.setRecipeNames(listLocal()); }
+
+async function copyLink(): Promise<void> {
+  const url = shareUrl(store.get());
+  try { history.replaceState(null, '', new URL(url).hash); } catch { /* ignorado */ }
+  try {
+    await navigator.clipboard.writeText(url);
+    say('OK: link copiado (#r=...)');
+  } catch { say('OK: link na barra de endereço (copie manualmente)'); }
 }
 
-const unsub = store.subscribe((p) => {
+const panel = createPanel(side, store, {
+  loadFile: () => input.openPicker(),
+  sample: () => setImage(input.loadSample()),
+  exportPng: (s) => { if (needImage()) exportPng(renderer, s).then(() => say(`OK: PNG ${s}x exportado`), (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao exportar PNG', true)); },
+  exportTxt: () => { if (needImage()) { exportTxt(renderer); say('OK: TXT exportado'); } },
+  copyText: () => { if (needImage()) void copyText(renderer).then((ok) => say(ok ? 'OK: texto copiado' : 'ERRO: não foi possível copiar', !ok)); },
+  saveRecipe: (n) => { if (saveLocal(n, store.get())) { refreshRecipes(); say('OK: receita salva'); } else say('ERRO: nome ou armazenamento inválido', true); },
+  loadRecipe: (n) => { const p = loadLocal(n); if (p) { applyParams(p); say('OK: receita carregada'); } else say('ERRO: receita não encontrada', true); },
+  deleteRecipe: (n) => { deleteLocal(n); refreshRecipes(); say('OK: receita apagada'); },
+  share: () => { void copyLink(); },
+  randomize: () => { applyParams(randomizeParams(store.get(), (Math.random() * 4294967296) >>> 0)); },
+});
+refreshRecipes();
+
+const unsubStore = store.subscribe((p) => {
   renderer.setParams(p);
-  rCols.value = String(p.cols);
-  oCols.textContent = String(p.cols);
-  if (!loopRunning && hasImage) renderer.frame(performance.now() / 1000, 0, ptr);
+  if (hasImage) title.textContent = title.textContent!.replace(/-> \d+ colunas/, `-> ${p.cols} colunas`);
+  renderOnce();
 });
 
-// Eventos de UI
-const on = <K extends keyof HTMLElementEventMap>(el: HTMLElement | Window, ev: K, fn: (e: HTMLElementEventMap[K]) => void) => {
-  el.addEventListener(ev, fn as EventListener);
-  cleanups.push(() => el.removeEventListener(ev, fn as EventListener));
+// Viewport, atalhos, configurações, ambiente.
+const view = createViewport($('vp'), canvas, () => { /* zoom só afeta a transformação */ }, () => store.get().interact === 'off');
+const shortcuts = createShortcuts({
+  togglePause, undo: () => store.undo(), redo: () => store.redo(),
+  randomize: () => applyParams(randomizeParams(store.get(), (Math.random() * 4294967296) >>> 0)),
+  exportPng: () => { if (needImage()) void exportPng(renderer, 1).then(() => say('OK: PNG 1x exportado'), () => say('ERRO: falha ao exportar PNG', true)); },
+});
+const ambient = createAmbient(document.body);
+const settings = mountSettings(panel.settingsSlot, { getPrefs, setPrefs, subscribe: subPrefs }, () => { void playIntro(true); });
+
+const applyPrefs = (): void => {
+  const p = getPrefs();
+  document.body.classList.toggle('crt', p.crt);
+  fpsEl.hidden = !p.fps;
+  ambient.setEnabled(p.ambient);
 };
-const cleanups: Array<() => void> = [];
+const unsubPrefs = subPrefs(applyPrefs);
+applyPrefs();
 
-on($('b-open'), 'click', () => input.openPicker());
-on($('b-sample'), 'click', () => setImage(input.loadSample()));
+// Eventos de UI.
+const ac = new AbortController();
+const on = (el: EventTarget, ev: string, fn: (e: never) => void): void => el.addEventListener(ev, fn as EventListener, { signal: ac.signal });
 on(bPause, 'click', togglePause);
-on($('b-png'), 'click', () => {
-  if (!hasImage) return say('ERRO: carregue uma imagem primeiro', true);
-  exportPng(renderer, 2).then(() => say('OK: PNG exportado'), () => say('ERRO: falha ao exportar PNG', true));
+on($('b-zin'), 'click', () => view.zoomBy(1.25));
+on($('b-zout'), 'click', () => view.zoomBy(0.8));
+on($('b-zfit'), 'click', () => view.fit());
+on(bDrawer, 'click', () => {
+  const open = !side.classList.contains('open');
+  side.classList.toggle('open', open);
+  bDrawer.setAttribute('aria-expanded', String(open));
 });
-on($('b-txt'), 'click', () => {
-  if (!hasImage) return say('ERRO: carregue uma imagem primeiro', true);
-  exportTxt(renderer);
-  say('OK: TXT exportado');
-});
-on($('b-copy'), 'click', () => {
-  if (!hasImage) return say('ERRO: carregue uma imagem primeiro', true);
-  void copyText(renderer).then((ok) => say(ok ? 'OK: texto copiado' : 'ERRO: não foi possível copiar', !ok));
-});
-on(rCols, 'input', () => store.set({ cols: Number(rCols.value) }));
-on(rCols, 'change', () => store.commit());
-on(window, 'keydown', (e) => {
-  const t = e.target as HTMLElement;
-  if (t.tagName === 'INPUT' && (t as HTMLInputElement).type !== 'range') return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? store.redo() : store.undo(); }
-  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); store.redo(); }
-  else if (e.key === ' ' && t.tagName !== 'BUTTON') { e.preventDefault(); togglePause(); }
-});
-on(canvas, 'pointermove', (e) => {
+on(canvas, 'pointermove', (e: PointerEvent) => {
   const r = canvas.getBoundingClientRect();
-  ptr.x = (e.clientX - r.left) / r.width; ptr.y = (e.clientY - r.top) / r.height; ptr.active = true;
+  ptr.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  ptr.y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  ptr.active = true;
 });
 on(canvas, 'pointerleave', () => { ptr.active = false; ptr.down = false; });
 on(canvas, 'pointerdown', () => { ptr.down = true; });
-on(canvas, 'pointerup', () => { ptr.down = false; });
+on(window, 'pointerup', () => { ptr.down = false; });
 on(document.body, 'dragover', () => document.body.classList.add('dragover'));
 on(document.body, 'dragleave', () => document.body.classList.remove('dragover'));
 on(document.body, 'drop', () => document.body.classList.remove('dragover'));
 
-// Abertura: renderiza o exemplo e inicia o loop.
-const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (reduced) { loopRunning = false; syncPause(); }
-setImage(input.loadSample());
-store.set({});
-if (reduced) renderer.frame(0, 0, ptr); else loop.start();
+let disposed = false;
+function cleanup(): void {
+  if (disposed) return;
+  disposed = true;
+  ac.abort(); unsubStore(); unsubPrefs(); clearTimeout(msgTimer);
+  shortcuts.dispose(); view.dispose(); settings.dispose(); panel.dispose(); ambient.dispose();
+  loop.dispose(); input.dispose(); renderer.dispose();
+}
+// bfcache: só destrói em descarte real; em persisted o loop retoma sozinho pela visibilidade.
+window.addEventListener('pagehide', (e) => { if (!e.persisted) cleanup(); });
+window.addEventListener('pageshow', (e) => { if (e.persisted && !disposed) renderOnce(); });
 
-window.addEventListener('pagehide', () => {
-  unsub();
-  cleanups.forEach((f) => f());
-  loop.dispose();
-  input.dispose();
-  renderer.dispose();
-}, { once: true });
+async function playIntro(force: boolean): Promise<void> {
+  if (!force && !getPrefs().intro && getPrefs().seenWarning) return;
+  const wasPaused = loop.paused;
+  app.inert = true;
+  try { await runIntro({ container: document.body, reduced: reducedMotion() || getPrefs().intensity === 'reduced' }); }
+  finally { app.inert = false; if (wasPaused !== loop.paused) syncPause(); }
+}
+
+// Início: app monta por trás da abertura.
+try { setImage(input.loadSample()); }
+catch { empty.hidden = false; startupWarn = startupWarn || 'ERRO: falha ao gerar a imagem de exemplo'; }
+const startReduced = reducedMotion() || getPrefs().intensity === 'reduced';
+loop.start();
+if (startReduced) { loop.pause(); renderOnce(); }
+syncPause();
+if (document.fonts?.ready) void document.fonts.ready.then(renderOnce, () => say('AVISO: fonte não carregou (usando fallback)', true));
+void playIntro(false).then(() => { if (startupWarn) say(startupWarn, startupWarn.startsWith('ERRO')); });
