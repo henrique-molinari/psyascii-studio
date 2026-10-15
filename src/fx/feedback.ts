@@ -3,13 +3,16 @@ import type { CellStage, FrameCtx } from '../core/types';
 
 let prev = new Float32Array(0);
 let size = 0;
+let pc = 0, pr = 0;
+
+export function resetFeedback(): void { prev = new Float32Array(0); size = 0; pc = 0; pr = 0; }
 
 export const tunnelStage: CellStage = (ctx: FrameCtx) => {
   const f = ctx.params.fx.tunnel;
   const n = ctx.cols * ctx.rows;
-  if (n !== size) { prev = new Float32Array(n); size = n; }
+  if (n !== size || ctx.cols !== pc || ctx.rows !== pr) { prev = new Float32Array(n); size = n; pc = ctx.cols; pr = ctx.rows; }
   if (!f.on) { prev.fill(0); return; }
-  const { cols, rows, lum } = ctx;
+  const { cols, rows, lum, mask } = ctx;
   const mix = ctx.params.mix;
   const decay = 0.72 + 0.26 * f.amt;
   const zoom = 1 + 0.01 + 0.05 * f.amt;
@@ -23,6 +26,7 @@ export const tunnelStage: CellStage = (ctx: FrameCtx) => {
       const sx = Math.round(cx + dx * ca - dy * sa);
       const sy = Math.round(cy + (dx * sa + dy * ca) / 2);
       const i = y * cols + x;
+      if (!mask[i]) continue;
       let old = 0;
       if (sx >= 0 && sx < cols && sy >= 0 && sy < rows) old = prev[sy * cols + sx] * decay;
       const cur = lum[i];
@@ -32,5 +36,5 @@ export const tunnelStage: CellStage = (ctx: FrameCtx) => {
     }
   }
   // Atualiza o histórico depois de ler tudo (evita ler valores do mesmo quadro).
-  prev.set(lum);
+  for (let i = 0; i < n; i++) prev[i] = mask[i] ? lum[i] : 0;
 };

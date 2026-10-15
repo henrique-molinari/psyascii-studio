@@ -8,10 +8,10 @@ import './intro.css';
 const LINES = ['> inicializando PsyASCII Studio...', '> carregando módulos...', '> pronto'];
 const REVEAL_MS = 1100;
 
-export function runIntro(opts: { container: HTMLElement; reduced: boolean }): Promise<void> {
-  const { container, reduced } = opts;
+export function runIntro(opts: { container: HTMLElement; reduced: boolean; force?: boolean; release?: () => void }): Promise<void> {
+  const { container, reduced, force, release } = opts;
   const first = !getPrefs().seenWarning;
-  if (!first && !getPrefs().intro) return Promise.resolve();
+  if (!first && !force && !getPrefs().intro) return Promise.resolve();
 
   return new Promise<void>((resolve) => {
     const prev = document.activeElement as HTMLElement | null;
@@ -58,6 +58,7 @@ export function runIntro(opts: { container: HTMLElement; reduced: boolean }): Pr
       window.removeEventListener('resize', size);
       engine.dispose();
       overlay.remove();
+      release?.(); // remove inert antes de devolver o foco
       if (prev && document.contains(prev)) prev.focus();
       resolve();
     };
@@ -94,7 +95,7 @@ export function runIntro(opts: { container: HTMLElement; reduced: boolean }): Pr
         if (ending || over) return;
         const row = document.createElement('div');
         boot.appendChild(row);
-        typing = typeText(row, line, { cps: 45, signal: ac.signal });
+        typing = typeText(row, line, { cps: 45, signal: ac.signal, reduced });
         await typing.done;
       }
       if (ending || over) return;

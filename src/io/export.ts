@@ -1,6 +1,8 @@
 // Exportação: PNG (1x/2x/4x), TXT e copiar texto. Tudo local via Blob.
 import type { AsciiRenderer } from '../core/renderer';
 
+const MAX_EXPORT_AREA = 64_000_000; // 64 MP
+
 function stamp(): string {
   return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
 }
@@ -19,10 +21,13 @@ export function download(blob: Blob, name: string): void {
 
 export function exportPng(renderer: AsciiRenderer, scale: 1 | 2 | 4 = 1): Promise<void> {
   return new Promise((resolve, reject) => {
-    const c = renderer.exportCanvas(scale);
+    let s: 1 | 2 | 4 = scale;
+    let c = renderer.exportCanvas(s);
+    while (c.width * c.height > MAX_EXPORT_AREA && s > 1) { s = s === 4 ? 2 : 1; c = renderer.exportCanvas(s); }
+    if (c.width * c.height > MAX_EXPORT_AREA) { reject(new Error('ERRO: imagem grande demais para exportar')); return; }
     c.toBlob((b) => {
       if (!b) { reject(new Error('ERRO: falha ao gerar PNG')); return; }
-      download(b, `psyascii-${stamp()}-${scale}x.png`);
+      download(b, `psyascii-${stamp()}-${s}x.png`);
       resolve();
     }, 'image/png');
   });

@@ -11,12 +11,17 @@ function editing(t: EventTarget | null): boolean {
   const el = t as HTMLElement | null;
   if (!el || !el.tagName) return false;
   const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  if (tag === 'INPUT') {
+    const ty = (el as HTMLInputElement).type;
+    return ['text', 'search', 'url', 'email', 'tel', 'password', 'number'].includes(ty);
+  }
+  return tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
 }
 
 export function createShortcuts(a: ShortcutActions): { dispose(): void } {
   const onKey = (e: KeyboardEvent): void => {
     if (e.defaultPrevented || e.isComposing || editing(e.target)) return;
+    if (document.querySelector('.intro-overlay')) return; // abertura/aviso modal aberta
     const k = e.key.toLowerCase();
     const mod = e.ctrlKey || e.metaKey;
     if (mod && !e.altKey) {

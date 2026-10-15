@@ -15,6 +15,7 @@ export interface InputHandle {
 }
 
 export const MAX_BYTES = 25 * 1024 * 1024;
+export const MAX_PIXELS = 100_000_000; // 100 MP
 const TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp'];
 
 function makeCanvas(w: number, h: number): HTMLCanvasElement {
@@ -34,6 +35,7 @@ export function validateFile(file: File): string | null {
 /** Decodifica (orientação EXIF aplicada) e reduz para <= 2048 px. GIF = 1º quadro. */
 export async function decodeFile(file: File): Promise<LoadedImage> {
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  if (bmp.width * bmp.height > MAX_PIXELS) { bmp.close(); throw new Error('ERRO: imagem maior que 100 megapixels'); }
   const scale = Math.min(1, MAX_IMAGE_PX / Math.max(bmp.width, bmp.height));
   if (scale >= 1) return { source: bmp, w: bmp.width, h: bmp.height };
   const w = Math.max(1, Math.round(bmp.width * scale));
@@ -73,7 +75,7 @@ export function setupInput(opts: InputOptions): InputHandle {
   const { dropTarget, onImage, onError } = opts;
   let disposed = false;
   let seq = 0;
-  const urls: string[] = [];
+  let dragDepth = 0;
 
   const picker = document.createElement('input');
   picker.type = 'file';
@@ -89,8 +91,8 @@ export function setupInput(opts: InputOptions): InputHandle {
       const img = await decodeFile(file);
       if (disposed || id !== seq) { if (img.source instanceof ImageBitmap) img.source.close(); return; }
       onImage(img);
-    } catch {
-      if (!disposed) onError('ERRO: não foi possível decodificar a imagem');
+    } catch (e) {
+      if (!disposed) onError(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: não foi possível decodificar a imagem');
     }
   }
 
@@ -104,9 +106,11 @@ export function setupInput(opts: InputOptions): InputHandle {
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     dropTarget.classList.add('dragover');
   };
-  const onLeave = () => dropTarget.classList.remove('dragover');
+  const onEnter = (e: DragEvent) => { e.preventDefault(); dragDepth++; dropTarget.classList.add('dragover'); };
+  const onLeave = () => { dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) dropTarget.classList.remove('dragover'); };
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
+    dragDepth = 0;
     dropTarget.classList.remove('dragover');
     const f = e.dataTransfer?.files?.[0];
     if (f) void loadFile(f);
@@ -127,6 +131,7 @@ export function setupInput(opts: InputOptions): InputHandle {
 
   picker.addEventListener('change', onPick);
   dropTarget.addEventListener('dragover', onOver);
+  dropTarget.addEventListener('dragenter', onEnter);
   dropTarget.addEventListener('dragleave', onLeave);
   dropTarget.addEventListener('drop', onDrop);
   window.addEventListener('paste', onPaste);
@@ -143,13 +148,13 @@ export function setupInput(opts: InputOptions): InputHandle {
       disposed = true;
       picker.removeEventListener('change', onPick);
       dropTarget.removeEventListener('dragover', onOver);
+      dropTarget.removeEventListener('dragenter', onEnter);
       dropTarget.removeEventListener('dragleave', onLeave);
       dropTarget.removeEventListener('drop', onDrop);
       window.removeEventListener('paste', onPaste);
       window.removeEventListener('dragover', stop);
       window.removeEventListener('drop', stop);
       picker.remove();
-      for (const u of urls.splice(0)) URL.revokeObjectURL(u);
     },
   };
 }

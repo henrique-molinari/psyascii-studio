@@ -13,7 +13,7 @@ let edgeBuf = new Float32Array(0);
 
 /** Número de linhas para a imagem srcW×srcH com `cols` colunas e proporção de célula (largura/altura). */
 export function rowsFor(cols: number, srcW: number, srcH: number, cellAspect: number): number {
-  const r = Math.round(cols * (srcH / Math.max(1, srcW)) * cellAspect);
+  const r = Math.round(cols * (srcH / Math.max(1, srcW)) * Math.max(0.05, cellAspect || 0.5));
   return Math.max(1, Math.min(600, r));
 }
 
@@ -66,11 +66,8 @@ export function buildGrid(src: CanvasImageSource, srcW: number, srcH: number, pa
   }
   c.clearRect(0, 0, cols, rows);
   c.drawImage(src, 0, 0, srcW, srcH, 0, 0, cols, rows);
-  if (!image || image.width !== cols || image.height !== rows) image = c.getImageData(0, 0, cols, rows);
-  else {
-    const fresh = c.getImageData(0, 0, cols, rows);
-    image.data.set(fresh.data);
-  }
+  // getImageData devolve buffer novo (pequeno: cols×rows); usado direto, sem cópia extra.
+  image = c.getImageData(0, 0, cols, rows);
 
   fillLuminance(image.data, n, g.lum, g.r, g.g, g.b);
   backgroundMask(g.lum, n, params.bgCut, g.mask);

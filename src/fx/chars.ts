@@ -13,6 +13,7 @@ const rainStage: CellStage = (ctx: FrameCtx) => {
   if (!f.on) return;
   const { cols, rows, lum, glyphOverride, t } = ctx;
   const seed = ctx.params.seed | 0, mix = ctx.params.mix;
+  if (mix < 0.05) return;
   const tail = 6 + f.amt * 16;
   const span = rows + tail;
   const tick = Math.floor(t * 3);

@@ -1,10 +1,10 @@
 // Monta o Pipeline a partir dos módulos de efeitos.
 import type { Pipeline } from '../core/types';
 import { warps } from './distort';
-import { tunnelStage } from './feedback';
+import { tunnelStage, resetFeedback } from './feedback';
 import { charStages } from './chars';
-import { colorStages } from './colorfx';
-import { postStages } from './post';
+import { colorStages, resetColorfx } from './colorfx';
+import { postStages, resetPost } from './post';
 
 export function createPipeline(): Pipeline {
   return {
@@ -13,6 +13,6 @@ export function createPipeline(): Pipeline {
     colorStages,
     post: postStages,
     resize(cols: number, rows: number): void { void cols; void rows; },
-    dispose(): void { /* assets de post são módulos estáticos e leves */ },
+    dispose(): void { resetFeedback(); resetColorfx(); resetPost(); },
   };
 }

@@ -15,7 +15,7 @@
 .intro-warning { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 34rem); padding: 1.5rem; background: rgba(0, 0, 0, .9); border: 1px solid var(--green-dark); box-shadow: var(--glow); text-align: center; }
 .intro-warning h2 { margin: 0 0 .75rem; font-family: var(--font-title); font-size: 1.75rem; font-weight: 400; color: var(--amber); }
 .intro-warning p { margin: 0 0 1.25rem; color: var(--text); line-height: 1.55; }
-.intro-btn { min-height: var(--touch); min-width: var(--touch); padding: 0 1.25rem; background: var(--bg-1); color: var(--green); border: 1px solid var(--green-dark); font: inherit; cursor: pointer; }
+.intro-btn { min-height: var(--touch); min-width: var(--touch); padding: 0 1.25rem; background: var(--bg-1); color: var(--green); border: 1px solid var(--green-dim); font: inherit; cursor: pointer; }
 .intro-btn:hover { background: var(--bg-2); box-shadow: var(--glow); }
 .intro-btn:focus-visible { outline: 2px solid var(--head); outline-offset: 2px; }
 .intro-skip { position: absolute; right: 1rem; bottom: 1rem; }

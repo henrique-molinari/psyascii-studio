@@ -88,7 +88,7 @@ const vignette: PostStage = {
   },
 };
 
-// ---- grain: tile de ruído 128x128; offset muda no máx. 12 Hz, amplitude baixa
+// ---- grain: tile de ruído 128x128; offset muda no máx. 3 Hz, amplitude baixa
 const TILE = 128;
 let grainPat: CanvasPattern | null = null;
 let gOx = 0, gOy = 0, gLast = -1;
@@ -117,7 +117,7 @@ const grain: PostStage = {
       if (!grainPat) return;
     }
     const t = ctx.t;
-    if (gLast < 0 || t < gLast || t - gLast >= 1 / 12) {
+    if (gLast < 0 || t < gLast || t - gLast >= 1 / 3) {
       gLast = t; gOx = (rnd() * TILE) | 0; gOy = (rnd() * TILE) | 0;
     }
     c.save();
@@ -148,5 +148,11 @@ const reveal: PostStage = {
     c.restore();
   },
 };
+
+/** Zera estado de módulo (chamado em dispose do pipeline). */
+export function resetPost(): void {
+  glowCv = null; glowCtx = null; scanPat = null; vigCv = null; grainPat = null;
+  gOx = 0; gOy = 0; gLast = -1; getRevealSource = null;
+}
 
 export const postStages: PostStage[] = [glow, reveal, scan, vignette, grain];

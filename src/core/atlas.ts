@@ -48,7 +48,7 @@ function fontAvailable(fontFamily: string, fontPx: number, glyphs: readonly stri
 export function buildAtlas(
   glyphs: readonly string[], fontFamily: string, fontPx: number, cellW: number, cellH: number, dpr: number,
 ): Atlas {
-  const d = Math.max(1, Math.min(2, dpr || 1));
+  const d = Math.max(0.25, Math.min(2, dpr || 1));
   const cw = Math.max(1, Math.round(cellW * d));
   const ch = Math.max(1, Math.round(cellH * d));
   const list = glyphs.length ? glyphs : [' '];

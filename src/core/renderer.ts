@@ -11,6 +11,7 @@ const FAMILY = {
 };
 const LATIN_RAIN = RAIN_GLYPHS.filter((g) => g.charCodeAt(0) < 0x3000);
 const MAX_EXPORT_PX = 16000;
+const MAX_AREA = 16_000_000;
 
 export class AsciiRenderer {
   private canvas: HTMLCanvasElement;
@@ -37,6 +38,11 @@ export class AsciiRenderer {
   private rampLen = 1;
   private rainLen = 1;
   private dpr = 1;
+  private dprNom = 1;
+  private akP: Params | null = null;
+  private akDpr = 0;
+  private akCols = 0;
+  private akRows = 0;
   private triedFonts = new Set<string>();
 
   private fc: ColorFrameCtx | null = null;
@@ -71,15 +77,23 @@ export class AsciiRenderer {
     if (key !== this.sampKey) { this.sampKey = key; this.srcDirty = true; }
   }
 
-  private ensureAtlas(p: Params): void {
-    this.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const key = [p.charset, p.custom, p.fontSize, p.fontFamily, p.cellAspect, this.dpr].join('|');
-    if (key === this.atlasKey && this.atlas) return;
+  private ensureAtlas(p: Params, cols: number, rows: number): void {
+    const asp = Math.max(0.1, p.cellAspect || 0.5);
+    this.dprNom = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    // Limite de área do canvas: reduz a escala (DPR e, se preciso, a célula) até caber.
+    const cssArea = cols * rows * p.fontSize * p.fontSize * asp;
+    this.dpr = Math.max(0.25, Math.min(this.dprNom, Math.sqrt(MAX_AREA / Math.max(1, cssArea))));
+    const k = this.akP;
+    if (this.atlas && k && k.charset === p.charset && k.custom === p.custom && k.fontSize === p.fontSize &&
+      k.fontFamily === p.fontFamily && k.cellAspect === p.cellAspect && this.akDpr === this.dpr &&
+      this.akCols === cols && this.akRows === rows && this.atlasKey !== '') return;
+    this.akP = p; this.akDpr = this.dpr; this.akCols = cols; this.akRows = rows;
+    const key = 'ok';
     const family = FAMILY[p.fontFamily];
     let ramp = getRamp(p.charset, p.custom);
     let rain = RAIN_GLYPHS.slice();
     const wantsKana = p.charset === 'katakana' || p.fontFamily === 'kana';
-    let atlas = buildAtlas(ramp.concat(rain), family, p.fontSize, p.fontSize * p.cellAspect, p.fontSize, this.dpr);
+    let atlas = buildAtlas(ramp.concat(rain), family, p.fontSize, p.fontSize * asp, p.fontSize, this.dpr);
     if (wantsKana && atlas.fallback) {
       // Fonte kana ausente: tenta carregar uma vez; enquanto isso, usa latim.
       if (!this.triedFonts.has(family)) {
@@ -88,7 +102,7 @@ export class AsciiRenderer {
       }
       if (p.charset === 'katakana') ramp = getRamp('classic', '');
       rain = LATIN_RAIN.slice();
-      atlas = buildAtlas(ramp.concat(rain), family, p.fontSize, p.fontSize * p.cellAspect, p.fontSize, this.dpr);
+      atlas = buildAtlas(ramp.concat(rain), family, p.fontSize, p.fontSize * asp, p.fontSize, this.dpr);
     }
     this.atlas = atlas;
     this.atlasKey = key;
@@ -105,8 +119,8 @@ export class AsciiRenderer {
     const W = g.cols * a.cellW, H = g.rows * a.cellH;
     if (this.canvas.width !== W || this.canvas.height !== H) {
       this.canvas.width = W; this.canvas.height = H;
-      this.canvas.style.width = `${W / this.dpr}px`;
-      this.canvas.style.height = `${H / this.dpr}px`;
+      this.canvas.style.width = `${W / this.dprNom}px`;
+      this.canvas.style.height = `${H / this.dprNom}px`;
       this.layer.width = W; this.layer.height = H;
     }
     let fc = this.fc;
@@ -138,7 +152,7 @@ export class AsciiRenderer {
       this.grid = buildGrid(this.src, this.srcW, this.srcH, p, this.grid);
       this.srcDirty = false;
     }
-    this.ensureAtlas(p);
+    this.ensureAtlas(p, this.grid.cols, this.grid.rows);
     const g = this.grid, fc = this.ensureBuffers(g, p), a = this.atlas as Atlas;
     fc.t = t; fc.dt = dt;
     if (ptr) { fc.ptr.x = ptr.x; fc.ptr.y = ptr.y; fc.ptr.down = ptr.down; fc.ptr.active = ptr.active; }
@@ -156,7 +170,7 @@ export class AsciiRenderer {
         if (nw > 0) {
           let sx = x, sy = y;
           for (let k = 0; k < nw; k++) { act[k].map(sx, sy, tmp); sx = tmp[0]; sy = tmp[1]; }
-          sx = x + (sx - x) * mix; sy = y + (sy - y) * mix;
+          sx = x + ((sx || 0) - x) * mix; sy = y + ((sy || 0) - y) * mix;
           let ix = Math.round(sx), iy = Math.round(sy);
           ix = ix < 0 ? 0 : ix >= cols ? cols - 1 : ix;
           iy = iy < 0 ? 0 : iy >= rows ? rows - 1 : iy;
@@ -229,7 +243,8 @@ export class AsciiRenderer {
     const fc = this.fc, a = this.atlas, p = this.params, img = this.colorImg;
     if (!fc || !a || !p || !img) { out.width = 1; out.height = 1; return out; }
     const cwB = a.cellW / this.dpr, chB = a.cellH / this.dpr;
-    const f = Math.min(1, MAX_EXPORT_PX / (Math.max(fc.cols * cwB, fc.rows * chB) * scale));
+    const w0 = fc.cols * cwB * scale, h0 = fc.rows * chB * scale;
+    const f = Math.min(1, MAX_EXPORT_PX / Math.max(w0, h0, 1), Math.sqrt(MAX_AREA / Math.max(1, w0 * h0)));
     const s = scale * f, cw = cwB * s, ch = chB * s;
     out.width = Math.max(1, Math.round(fc.cols * cw)); out.height = Math.max(1, Math.round(fc.rows * ch));
     const c = out.getContext('2d');

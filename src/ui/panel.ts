@@ -6,6 +6,7 @@ import type { Store } from './store';
 import { slider, toggle, select, textInput, button } from './controls';
 import type { Opt } from './controls';
 import { PRESETS } from './presets';
+import { getPrefs } from './prefs';
 
 export interface PanelActions {
   loadFile(): void; sample(): void; exportPng(scale: 1 | 2 | 4): void; exportTxt(): void; copyText(): void;
@@ -36,7 +37,7 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
   const settingsSlot = document.createElement('div');
 
   const typeText = (el: HTMLElement, text: string) => {
-    if (reduced) { el.textContent = text; return; }
+    if (reduced || getPrefs().intensity === 'reduced') { el.textContent = text; return; }
     let i = 0;
     const done = () => { window.clearInterval(id); timers.delete(id); finishers.delete(done); el.textContent = text; };
     const id = window.setInterval(() => { i++; el.textContent = text.slice(0, i) + '▓'; if (i >= text.length) done(); }, 22);

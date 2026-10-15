@@ -21,7 +21,7 @@ function make(id: EffectId | 'interact', enabled: (p: Params) => boolean, amtId:
     prepare(ctx: FrameCtx): void {
       const p = ctx.params, f = p.fx[amtId];
       s.cols = ctx.cols; s.rows = ctx.rows; s.cx = ctx.cols / 2; s.cy = ctx.rows / 2;
-      s.asp = p.cellAspect; s.t = ctx.t; s.amt = f.amt; s.sp = 0.2 + f.speed * 2.5; s.n = id === 'interact' ? (p.interact === 'repel' ? 1 : p.interact === 'attract' ? 2 : 3) : p.kaleidoN;
+      s.asp = Math.max(0.1, p.cellAspect || 0.5); s.t = ctx.t; s.amt = f.amt; s.sp = 0.2 + f.speed * 2.5; s.n = id === 'interact' ? (p.interact === 'repel' ? 1 : p.interact === 'attract' ? 2 : 3) : p.kaleidoN;
       s.R = p.interactRadius;
       s.on = ctx.ptr.active;
       s.px = ctx.ptr.x * ctx.cols; s.py = ctx.ptr.y * ctx.rows;
@@ -68,18 +68,19 @@ const kaleido = make('kaleido', on('kaleido'), 'kaleido', (s, x, y, o) => {
 const mirror = make('mirror', on('mirror'), 'mirror', (s, x, y, o) => {
   const cx = s.cx + Math.sin(s.t * s.sp * 0.5) * s.amt * s.cols * 0.15;
   o[0] = x > cx ? 2 * cx - x : x;
-  o[1] = s.amt > 0.5 && y > s.cy ? 2 * s.cy - y : y;
+  const fy = y > s.cy ? 2 * s.cy - y : y, q = s.amt <= 0.5 ? 0 : (s.amt - 0.5) * 2;
+  o[1] = y + (fy - y) * q;
 });
 
 const jitter = make('jitter', on('jitter'), 'jitter', (s, x, y, o) => {
-  const k = Math.floor(s.t * (0.5 + (s.sp - 0.2) * 1.0)); // no máx. ~3 mudanças/s
+  const k = Math.floor(s.t * (0.5 + (s.sp - 0.2) * 0.8)); // no máx. 2,5 mudanças/s
   const m = s.amt * 2.5;
   o[0] = x + (hash3(x, y, k) - 0.5) * 2 * m;
   o[1] = y + (hash3(y, x, k + 977) - 0.5) * 2 * m * s.asp * 2;
 });
 
 const glitch = make('glitch', on('glitch'), 'glitch', (s, x, y, o) => {
-  const k = Math.floor(s.t * (0.5 + (s.sp - 0.2) * 1.0));
+  const k = Math.floor(s.t * (0.5 + (s.sp - 0.2) * 0.8));
   const band = Math.floor(y / 3);
   const h = hash3(band, k, 31);
   o[0] = h > 1 - s.amt * 0.5 ? x + (hash3(band, k, 77) - 0.5) * s.cols * 0.3 * s.amt : x;

@@ -20,7 +20,7 @@ import { recordWebm, webmSupported } from './io/webm';
 import type { WebmHandle } from './io/webm';
 import { loadVideoFile, openVideoPicker, videoSupported } from './io/video';
 import type { LoadedVideo } from './io/video';
-import { recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from './io/recipes';
+import { MAX_RECIPES, sanitizeName, recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from './io/recipes';
 import { createPipeline } from './fx';
 import { setRevealSource } from './fx/post';
 
@@ -145,7 +145,7 @@ const panel = createPanel(side, store, {
   exportPng: (s) => { if (needImage()) exportPng(renderer, s).then(() => say(`OK: PNG ${s}x exportado`), (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao exportar PNG', true)); },
   exportTxt: () => { if (needImage()) { exportTxt(renderer); say('OK: TXT exportado'); } },
   copyText: () => { if (needImage()) void copyText(renderer).then((ok) => say(ok ? 'OK: texto copiado' : 'ERRO: não foi possível copiar', !ok)); },
-  saveRecipe: (n) => { if (saveLocal(n, store.get())) { refreshRecipes(); say('OK: receita salva'); } else say('ERRO: nome ou armazenamento inválido', true); },
+  saveRecipe: (n) => { if (listLocal().length >= MAX_RECIPES && !listLocal().includes(sanitizeName(n))) { say(`ERRO: limite de ${MAX_RECIPES} receitas salvas (apague alguma)`, true); return; } if (saveLocal(n, store.get())) { refreshRecipes(); say('OK: receita salva'); } else say('ERRO: nome inválido ou armazenamento cheio (cota)', true); },
   loadRecipe: (n) => { const p = loadLocal(n); if (p) { applyParams(p); say('OK: receita carregada'); } else say('ERRO: receita não encontrada', true); },
   deleteRecipe: (n) => { deleteLocal(n); refreshRecipes(); say('OK: receita apagada'); },
   share: () => { void copyLink(); },
@@ -200,9 +200,7 @@ on(canvas, 'pointermove', (e: PointerEvent) => {
 on(canvas, 'pointerleave', () => { ptr.active = false; ptr.down = false; });
 on(canvas, 'pointerdown', () => { ptr.down = true; });
 on(window, 'pointerup', () => { ptr.down = false; });
-on(document.body, 'dragover', () => document.body.classList.add('dragover'));
-on(document.body, 'dragleave', () => document.body.classList.remove('dragover'));
-on(document.body, 'drop', () => document.body.classList.remove('dragover'));
+on(window, 'hashchange', () => { const p = recipeFromHash(location.hash); if (p) { applyParams(p); say('OK: receita do link aplicada'); } else if (/^#r=/.test(location.hash)) say('ERRO: receita do link inválida', true); });
 
 let disposed = false;
 function cleanup(): void {
@@ -221,7 +219,7 @@ async function playIntro(force: boolean): Promise<void> {
   if (!force && !getPrefs().intro && getPrefs().seenWarning) return;
   const wasPaused = loop.paused;
   app.inert = true;
-  try { await runIntro({ container: document.body, reduced: reducedMotion() || getPrefs().intensity === 'reduced' }); }
+  try { await runIntro({ container: document.body, reduced: reducedMotion() || getPrefs().intensity === 'reduced', force, release: () => { app.inert = false; } }); }
   finally { app.inert = false; if (wasPaused !== loop.paused) syncPause(); }
 }
 

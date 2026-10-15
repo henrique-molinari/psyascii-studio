@@ -42,4 +42,6 @@ const aberrStage: CellStage = (c: FrameCtx) => {
   }
 };
 
+export function resetColorfx(): void { copy = new Uint8ClampedArray(0); }
+
 export const colorStages: CellStage[] = [hueStage, aberrStage];

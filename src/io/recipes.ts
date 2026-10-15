@@ -3,6 +3,7 @@ import { clampParams } from '../core/types';
 import type { Params } from '../core/types';
 
 const MAX_BYTES = 8192;
+export const MAX_RECIPES = 50;
 const PREFIX = 'psyascii:recipe:';
 
 export function encodeRecipe(p: Params): string {
