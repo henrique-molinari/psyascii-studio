@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PsyASCII Studio</title>
+</head>
+<body class="crt">
+  <header class="bar">
+    <h1>PsyASCII Studio</h1>
+    <div class="tools" role="toolbar" aria-label="Ferramentas">
+      <button class="btn" id="b-open" type="button">ABRIR</button>
+      <button class="btn" id="b-sample" type="button">EXEMPLO</button>
+      <button class="btn" id="b-png" type="button">PNG</button>
+      <button class="btn" id="b-txt" type="button">TXT</button>
+      <button class="btn" id="b-copy" type="button">COPIAR</button>
+      <label class="sl" for="r-cols">COLUNAS
+        <input id="r-cols" type="range" min="20" max="300" step="1" value="160" />
+        <output id="o-cols">160</output>
+      </label>
+    </div>
+  </header>
+  <main>
+    <section class="frame" id="frame" aria-label="Canvas ASCII">
+      <div class="title">
+        <span id="title">[ canvas ] aguardando imagem</span>
+        <button class="btn" id="b-pause" type="button" aria-pressed="false">PAUSAR</button>
+      </div>
+      <canvas id="cv" aria-label="Imagem convertida em caracteres"></canvas>
+    </section>
+    <p id="msg" class="msg" role="status" aria-live="polite" hidden></p>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

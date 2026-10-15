@@ -29,3 +29,4 @@ Store (src/ui/store.ts): get(), set(patch), subscribe(fn)->unsub, commit() (empi
 Módulos: src/core/{types,tone,charsets,atlas,sampler,color,renderer,loop}.ts, src/fx/{rain,distort,feedback,chars,post,index}.ts (index exporta createPipeline()), src/io/{input,export,recipes,video}.ts, src/ui/*.
 
 ## Fases
+- Fase 0: feita (commit). Fase 1: núcleo escrito, build ok; validador F1 apontou (a corrigir): [F3 em main.ts] atalhos disparam em TEXTAREA/SELECT, pagehide/bfcache, ImageBitmap antigo sem close(), pipeline não ligado; [F5] sampler getImageData aloca por chamada, canvas gigante (cols 300 × DPR 2) precisa limite de área, 1 drawImage/célula (gargalo), input sem limite de pixels, export limita só o lado (limitar área), urls morto em input.ts.
