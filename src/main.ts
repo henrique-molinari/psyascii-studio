@@ -15,6 +15,11 @@ import { createShortcuts } from './ui/shortcuts';
 import { setupInput } from './io/input';
 import type { LoadedImage } from './io/input';
 import { exportPng, exportTxt, copyText } from './io/export';
+import { exportHtml } from './io/exportHtml';
+import { recordWebm, webmSupported } from './io/webm';
+import type { WebmHandle } from './io/webm';
+import { loadVideoFile, openVideoPicker, videoSupported } from './io/video';
+import type { LoadedVideo } from './io/video';
 import { recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from './io/recipes';
 import { createPipeline } from './fx';
 import { setRevealSource } from './fx/post';
@@ -56,8 +61,11 @@ const store = createStore(fromHash ?? defaultParams());
 const ptr = { x: 0, y: 0, down: false, active: false };
 let hasImage = false, curSource: CanvasImageSource | null = null, lastT = 0;
 
-function setImage(img: LoadedImage): void {
+let curVideo: LoadedVideo | null = null;
+function setImage(img: LoadedImage, video?: LoadedVideo): void {
   const prev = curSource;
+  if (curVideo && curVideo.source !== img.source) curVideo.dispose();
+  curVideo = video ?? null;
   renderer.setSource(img.source, img.w, img.h);
   curSource = img.source;
   if (prev && prev !== img.source && typeof ImageBitmap !== 'undefined' && prev instanceof ImageBitmap) prev.close();
@@ -76,6 +84,7 @@ let frames = 0, fpsT = 0;
 const loop = createLoop((t, dt) => {
   lastT = t;
   if (!hasImage) return;
+  if (curVideo) renderer.invalidateSource();
   renderer.frame(t, dt, ptr);
   frames++;
   if (getPrefs().fps && t - fpsT >= 0.5) { fpsEl.textContent = `${Math.round(frames / (t - fpsT))} FPS`; frames = 0; fpsT = t; }
@@ -85,12 +94,41 @@ function renderOnce(): void { if (hasImage && loop.paused) renderer.frame(lastT,
 function syncPause(): void {
   bPause.textContent = loop.paused ? 'RETOMAR' : 'PAUSAR';
   bPause.setAttribute('aria-pressed', String(loop.paused));
+  if (curVideo) { if (loop.paused) curVideo.source.pause(); else void curVideo.source.play().catch(() => undefined); }
 }
 function togglePause(): void { loop.toggle(); syncPause(); }
 
 const needImage = (): boolean => { if (!hasImage) say('ERRO: carregue uma imagem primeiro', true); return hasImage; };
 function applyParams(p: ReturnType<typeof defaultParams>): void { store.set(p); store.commit(); }
 function refreshRecipes(): void { panel.setRecipeNames(listLocal()); }
+
+let rec: WebmHandle | null = null;
+function endRec(): void { rec = null; panel.setRecording(false); }
+function toggleWebm(): void {
+  if (rec) { rec.stop(); return; }
+  if (!needImage()) return;
+  if (!webmSupported()) { say('ERRO: gravação de vídeo indisponível neste navegador', true); return; }
+  if (loop.paused) say('AVISO: animação pausada, o vídeo sairá parado', true);
+  rec = recordWebm(canvas, 15, () => { endRec(); say('OK: WebM exportado'); }, (m) => { endRec(); say(m, true); });
+  if (rec) { panel.setRecording(true); say('REC: gravando (máx. 15 s) - clique em Parar'); }
+}
+function doHtml(): void {
+  if (!needImage()) return;
+  const wasPaused = loop.paused;
+  try {
+    const n = exportHtml(renderer, {
+      palette: store.get().palette, t0: lastT,
+      pause: () => { if (!wasPaused) loop.pause(); return () => { if (!wasPaused) { loop.toggle(); syncPause(); } }; },
+    });
+    say(`OK: HTML animado exportado (${n} quadros, monocromático)`);
+  } catch { say('ERRO: falha ao exportar HTML', true); }
+}
+function doVideo(): void {
+  if (!videoSupported()) { say('ERRO: vídeo indisponível neste navegador', true); return; }
+  openVideoPicker((f) => {
+    loadVideoFile(f).then((v) => { setImage(v, v); say('OK: vídeo carregado (local, sem áudio)'); }, (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao carregar vídeo', true));
+  });
+}
 
 async function copyLink(): Promise<void> {
   const url = shareUrl(store.get());
@@ -111,6 +149,7 @@ const panel = createPanel(side, store, {
   loadRecipe: (n) => { const p = loadLocal(n); if (p) { applyParams(p); say('OK: receita carregada'); } else say('ERRO: receita não encontrada', true); },
   deleteRecipe: (n) => { deleteLocal(n); refreshRecipes(); say('OK: receita apagada'); },
   share: () => { void copyLink(); },
+  exportHtml: doHtml, exportWebm: toggleWebm, loadVideo: doVideo,
   randomize: () => { applyParams(randomizeParams(store.get(), (Math.random() * 4294967296) >>> 0)); },
 });
 refreshRecipes();
@@ -169,6 +208,7 @@ let disposed = false;
 function cleanup(): void {
   if (disposed) return;
   disposed = true;
+  rec?.cancel(); curVideo?.dispose(); curVideo = null;
   ac.abort(); unsubStore(); unsubPrefs(); clearTimeout(msgTimer);
   shortcuts.dispose(); view.dispose(); settings.dispose(); panel.dispose(); ambient.dispose();
   loop.dispose(); input.dispose(); renderer.dispose();

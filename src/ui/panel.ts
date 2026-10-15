@@ -10,7 +10,7 @@ import { PRESETS } from './presets';
 export interface PanelActions {
   loadFile(): void; sample(): void; exportPng(scale: 1 | 2 | 4): void; exportTxt(): void; copyText(): void;
   saveRecipe(name: string): void; loadRecipe(name: string): void; deleteRecipe(name: string): void;
-  share(): void; randomize(): void; exportHtml?(): void; exportWebm?(): void;
+  share(): void; randomize(): void; exportHtml?(): void; exportWebm?(): void; loadVideo?(): void;
 }
 type NumKey = keyof typeof LIMITS;
 
@@ -88,6 +88,7 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
   // [01] IMAGEM
   const s1 = section('[01] IMAGEM', true);
   const r1 = row(s1); btn(r1, 'Carregar imagem', actions.loadFile); btn(r1, 'Imagem de exemplo', actions.sample);
+  if (actions.loadVideo) btn(r1, 'Carregar vídeo', actions.loadVideo);
   for (const [k, l, st] of NUMS.img) num(s1, k, l, st);
   tog(s1, 'invert', 'Inverter'); tog(s1, 'dither', 'Dither');
   // [02] CARACTERES
@@ -119,7 +120,8 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
   const r6b = row(s6);
   btn(r6b, 'TXT', actions.exportTxt); btn(r6b, 'Copiar texto', actions.copyText);
   if (actions.exportHtml) btn(r6b, 'HTML animado', actions.exportHtml);
-  if (actions.exportWebm) btn(r6b, 'Vídeo WebM', actions.exportWebm);
+  const webmBtn = actions.exportWebm ? button('Gravar WebM', actions.exportWebm) : null;
+  if (webmBtn) r6b.append(webmBtn.el);
   // [07] RECEITAS
   const s7 = section('[07] RECEITAS', false);
   const pre = select('Presets', PRESETS.map((x) => ({ value: x.name, label: x.name })), () => {}, () => {});
@@ -150,6 +152,7 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
 
   return {
     refresh, settingsSlot,
+    setRecording(on: boolean) { webmBtn?.set(on ? '■ Parar gravação' : 'Gravar WebM'); },
     setRecipeNames(n: string[]) { saved.setOptions(n.map((x) => ({ value: x, label: x }))); },
     dispose() {
       unsub(); for (const t of timers) window.clearInterval(t);
