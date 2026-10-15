@@ -32,8 +32,46 @@ export function validateFile(file: File): string | null {
   return null;
 }
 
+/** Lê largura/altura do cabeçalho (PNG, JPEG, GIF, WebP, BMP) sem decodificar; null se ilegível. */
+export function readDims(b: Uint8Array): { w: number; h: number } | null {
+  const n = b.length;
+  const u16 = (o: number) => (b[o] << 8) | b[o + 1];
+  const l16 = (o: number) => b[o] | (b[o + 1] << 8);
+  const u32 = (o: number) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+  const l32 = (o: number) => ((b[o + 3] << 24) | (b[o + 2] << 16) | (b[o + 1] << 8) | b[o]) | 0;
+  const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) if (b[o + i] !== s.charCodeAt(i)) return false; return true; };
+  let r: { w: number; h: number } | null = null;
+  if (n >= 24 && b[0] === 0x89 && str(1, 'PNG')) {
+    r = { w: u32(16), h: u32(20) };
+  } else if (n >= 10 && str(0, 'GIF8')) {
+    r = { w: l16(6), h: l16(8) };
+  } else if (n >= 26 && b[0] === 0x42 && b[1] === 0x4d) {
+    r = { w: Math.abs(l32(18)), h: Math.abs(l32(22)) };
+  } else if (n >= 30 && str(0, 'RIFF') && str(8, 'WEBP')) {
+    if (str(12, 'VP8X')) r = { w: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), h: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
+    else if (str(12, 'VP8L') && b[20] === 0x2f) {
+      r = { w: 1 + (b[21] | ((b[22] & 0x3f) << 8)), h: 1 + ((b[22] >> 6) | (b[23] << 2) | ((b[24] & 0x0f) << 10)) };
+    } else if (str(12, 'VP8 ')) r = { w: l16(26) & 0x3fff, h: l16(28) & 0x3fff };
+  } else if (n >= 4 && b[0] === 0xff && b[1] === 0xd8) {
+    let o = 2;
+    while (o + 9 < n) {
+      if (b[o] !== 0xff) { o++; continue; }
+      const m = b[o + 1];
+      if (m === 0xff) { o++; continue; }
+      if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7)) { o += 2; continue; }
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) { r = { w: u16(o + 7), h: u16(o + 5) }; break; }
+      o += 2 + u16(o + 2);
+    }
+  }
+  return r && r.w > 0 && r.h > 0 ? r : null;
+}
+
 /** Decodifica (orientação EXIF aplicada) e reduz para <= 2048 px. GIF = 1º quadro. */
 export async function decodeFile(file: File): Promise<LoadedImage> {
+  const head = new Uint8Array(await file.slice(0, 262144).arrayBuffer());
+  const dims = readDims(head);
+  if (!dims) throw new Error('ERRO: arquivo inválido (cabeçalho de imagem ilegível)');
+  if (dims.w * dims.h > MAX_PIXELS) throw new Error('ERRO: imagem maior que 100 megapixels');
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
   if (bmp.width * bmp.height > MAX_PIXELS) { bmp.close(); throw new Error('ERRO: imagem maior que 100 megapixels'); }
   const scale = Math.min(1, MAX_IMAGE_PX / Math.max(bmp.width, bmp.height));

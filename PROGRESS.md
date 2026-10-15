@@ -35,3 +35,8 @@ Módulos: src/core/{types,tone,charsets,atlas,sampler,color,renderer,loop}.ts, s
 - Validador F3 (corrigir na F5, sem ALTA): atalhos R/S/Ctrl+Z ativos sob o aviso modal (shortcuts.ts:18/main.ts:126); foco não volta após intro porque #app ainda inert (intro.ts:61/main.ts:185); "Rever abertura" ignorado com intro off (force); botões de zoom <44px no celular (style.css:62); editing() trata input range como texto (shortcuts.ts:13); título digitado ignora prefs.intensity reduced; trilho de slider/borda intro-btn com --green-dark (<3:1); sem limite de receitas; sem hashchange; #cv tabindex sem função.
 - Smoke test (Edge headless via playwright-core em scratchpad): abertura+UI+12 efeitos rodam sem erro de console.
 - Fase 4 feita (exportHtml mono, webm, video). Próximo: F5 correções + testes + performance.
+
+## FINAL
+- Fase 5 concluída: correções F1–F3 aplicadas, validador final sem ALTA; 4 MÉDIAS corrigidas (readDims antes de decodificar, HTML exportado com pausa/reduced-motion/sem corte, atlas independente de cols). Testes 30/30, build ok. Performance (Edge headless, 220 cols): frame() 36→4,5 ms sem efeitos; 6 efeitos 51,7→15 ms (~51 rAF/s; warps por célula são o suspeito).
+- Smoke Edge: aviso+abertura+UI, 12 efeitos, mobile 390 px sem overflow, upload real e arquivo inválido sem erros de console.
+- Limitações: microfone reativo e GIF animado não implementados; HTML exportado monocromático; WebM/vídeo não exercitados em navegador real; celular real não testado.

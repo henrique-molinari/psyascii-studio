@@ -17,8 +17,6 @@ export class AsciiRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private pipeline?: Pipeline;
-  private layer = document.createElement('canvas');
-  private layerCtx: CanvasRenderingContext2D;
   private colorCanvas = document.createElement('canvas');
   private colorCtx: CanvasRenderingContext2D;
   private colorImg: ImageData | null = null;
@@ -41,8 +39,6 @@ export class AsciiRenderer {
   private dprNom = 1;
   private akP: Params | null = null;
   private akDpr = 0;
-  private akCols = 0;
-  private akRows = 0;
   private triedFonts = new Set<string>();
 
   private fc: ColorFrameCtx | null = null;
@@ -51,14 +47,17 @@ export class AsciiRenderer {
   private active: WarpEffect[] = [];
   private tmp = new Float32Array(2);
   private disposed = false;
+  private out: ImageData | null = null;
+  private out32: Uint32Array | null = null;
+  private gaAtlas: Atlas | null = null;
+  private gaList: Uint8Array[] = [];
 
   constructor(canvas: HTMLCanvasElement, pipeline?: Pipeline) {
     this.canvas = canvas;
     const c = canvas.getContext('2d');
-    const l = this.layer.getContext('2d');
     const k = this.colorCanvas.getContext('2d');
-    if (!c || !l || !k) throw new Error('ERRO: Canvas 2D indisponível');
-    this.ctx = c; this.layerCtx = l; this.colorCtx = k;
+    if (!c || !k) throw new Error('ERRO: Canvas 2D indisponível');
+    this.ctx = c; this.colorCtx = k;
     this.pipeline = pipeline;
   }
 
@@ -86,8 +85,8 @@ export class AsciiRenderer {
     const k = this.akP;
     if (this.atlas && k && k.charset === p.charset && k.custom === p.custom && k.fontSize === p.fontSize &&
       k.fontFamily === p.fontFamily && k.cellAspect === p.cellAspect && this.akDpr === this.dpr &&
-      this.akCols === cols && this.akRows === rows && this.atlasKey !== '') return;
-    this.akP = p; this.akDpr = this.dpr; this.akCols = cols; this.akRows = rows;
+      this.atlasKey !== '') return;
+    this.akP = p; this.akDpr = this.dpr;
     const key = 'ok';
     const family = FAMILY[p.fontFamily];
     let ramp = getRamp(p.charset, p.custom);
@@ -114,6 +113,22 @@ export class AsciiRenderer {
     this.canvas.width = 0; // força redimensionamento
   }
 
+  /** Alfa de cada glifo do atlas (cw*ch bytes), extraído uma vez por atlas. */
+  private glyphAlpha(a: Atlas): Uint8Array[] {
+    if (this.gaAtlas === a) return this.gaList;
+    const cw = a.cellW, ch = a.cellH, n = this.glyphList.length;
+    const ctx = a.canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+    const d = ctx.getImageData(0, 0, cw * n, ch).data, tw = cw * n;
+    const list: Uint8Array[] = [];
+    for (let g = 0; g < n; g++) {
+      const arr = new Uint8Array(cw * ch);
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) arr[y * cw + x] = d[(y * tw + g * cw + x) * 4 + 3];
+      list.push(arr);
+    }
+    this.gaAtlas = a; this.gaList = list;
+    return list;
+  }
+
   private ensureBuffers(g: Grid, p: Params): ColorFrameCtx {
     const a = this.atlas as Atlas;
     const W = g.cols * a.cellW, H = g.rows * a.cellH;
@@ -121,7 +136,6 @@ export class AsciiRenderer {
       this.canvas.width = W; this.canvas.height = H;
       this.canvas.style.width = `${W / this.dprNom}px`;
       this.canvas.style.height = `${H / this.dprNom}px`;
-      this.layer.width = W; this.layer.height = H;
     }
     let fc = this.fc;
     if (!fc || fc.cols !== g.cols || fc.rows !== g.rows) {
@@ -198,26 +212,36 @@ export class AsciiRenderer {
     // 4) estágios de cor
     if (pl) for (const s of pl.colorStages) s(fc);
     this.colorCtx.putImageData(img, 0, 0);
-    // 5) desenho: glifos brancos na camada, depois cor via source-in (1 px/célula ampliado sem suavização)
-    const lc = this.layerCtx, cw = a.cellW, ch = a.cellH, W = this.layer.width, H = this.layer.height;
-    lc.globalCompositeOperation = 'source-over';
-    lc.clearRect(0, 0, W, H);
-    const sp = this.spaceFlag;
+    // 5) desenho: composição direta em ImageData (glifo alfa x cor da célula sobre preto), sem drawImage por célula
+    const cw = a.cellW, ch = a.cellH, W = this.canvas.width, H = this.canvas.height;
+    const ga = this.glyphAlpha(a);
+    if (!this.out || this.out.width !== W || this.out.height !== H) {
+      this.out = this.ctx.createImageData(W, H);
+      this.out32 = new Uint32Array(this.out.data.buffer);
+    }
+    const o32 = this.out32 as Uint32Array, cd = img.data, sp = this.spaceFlag;
+    o32.fill(0xff000000);
     for (let i = 0; i < n; i++) {
       const gi = idx[i];
       if (gi < 0 || sp[gi]) continue;
-      lc.drawImage(a.canvas, gi * cw, 0, cw, ch, (i % cols) * cw, ((i / cols) | 0) * ch, cw, ch);
+      const al = ga[gi];
+      const o = i * 4, cr = cd[o], cg = cd[o + 1], cb = cd[o + 2];
+      const row = (i / cols) | 0, x0 = (i - row * cols) * cw;
+      let base = row * ch * W + x0, k = 0;
+      for (let yy = 0; yy < ch; yy++, base += W) {
+        for (let xx = 0; xx < cw; xx++, k++) {
+          const av = al[k];
+          if (av === 0) continue;
+          o32[base + xx] = av === 255
+            ? (0xff000000 | (cb << 16) | (cg << 8) | cr)
+            : (0xff000000 | (((cb * av + 127) / 255 | 0) << 16) | (((cg * av + 127) / 255 | 0) << 8) | ((cr * av + 127) / 255 | 0));
+        }
+      }
     }
-    lc.globalCompositeOperation = 'source-in';
-    lc.imageSmoothingEnabled = false;
-    lc.drawImage(this.colorCanvas, 0, 0, cols, rows, 0, 0, W, H);
-    lc.globalCompositeOperation = 'source-over';
     const c = this.ctx;
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
-    c.fillStyle = '#000';
-    c.fillRect(0, 0, W, H);
-    c.drawImage(this.layer, 0, 0);
+    c.putImageData(this.out as ImageData, 0, 0);
     // 6) pós
     if (pl) for (const s of pl.post) s.draw(c, W, H, fc);
   }
@@ -269,6 +293,6 @@ export class AsciiRenderer {
     this.disposed = true;
     this.pipeline?.dispose();
     this.src = null; this.grid = undefined; this.atlas = null; this.fc = null; this.colorImg = null;
-    this.layer.width = 0; this.layer.height = 0; this.colorCanvas.width = 0; this.colorCanvas.height = 0;
+    this.out = null; this.out32 = null; this.gaList = []; this.gaAtlas = null; this.colorCanvas.width = 0; this.colorCanvas.height = 0;
   }
 }

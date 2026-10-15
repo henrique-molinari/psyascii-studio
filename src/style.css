@@ -93,6 +93,9 @@ body:not(.crt)::after { display: none; }
   #cv { max-height: calc(100dvh - 130px); }
   .title .btn { min-height: var(--touch); min-width: var(--touch); }
   .title { min-height: var(--touch); }
+  .title > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .title .btn { flex-shrink: 0; padding: 0 8px; }
+  .title { gap: 6px; padding-right: 4px; }
   input[type=range] { width: 120px; }
 }
 @media (prefers-reduced-motion: reduce) {

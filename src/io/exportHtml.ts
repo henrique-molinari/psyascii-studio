@@ -46,7 +46,11 @@ function hex(v: number): string {
 const SCRIPT = [
   'var d=JSON.parse(document.getElementById("d").textContent),p=document.getElementById("a"),i=0;',
   'function s(){p.textContent=d[i];i=(i+1)%d.length}',
-  's();if(d.length>1)setInterval(s,50);',
+  's();var t=null;function go(){if(!t)t=setInterval(s,50)}function st(){clearInterval(t);t=null}',
+  'function tg(){t?st():go()}',
+  'if(d.length>1&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){go();',
+  'document.addEventListener("click",tg);',
+  'document.addEventListener("keydown",function(e){if(e.key===" "||e.code==="Space"){e.preventDefault();tg()}})}',
 ].join('');
 
 export function buildHtml(frames: string[], color: string): string {
@@ -56,8 +60,8 @@ export function buildHtml(frames: string[], color: string): string {
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
     '<title>PsyASCII - animação</title>',
     '<style>html,body{margin:0;background:#000;min-height:100%}',
-    'body{display:flex;justify-content:center;align-items:center;min-height:100vh}',
-    'pre{margin:0;color:' + color + ';font:10px/1 ui-monospace,Consolas,monospace;white-space:pre;',
+    'body{min-height:100vh;overflow:auto;display:grid}',
+    'pre{margin:auto;color:' + color + ';font:10px/1 ui-monospace,Consolas,monospace;white-space:pre;',
     'text-shadow:0 0 4px ' + color + '}</style></head><body>',
     '<pre id="a" aria-label="Arte ASCII animada">' + first + '</pre>',
     '<script type="application/json" id="d">' + safeJson(frames) + '</' + 'script>',
