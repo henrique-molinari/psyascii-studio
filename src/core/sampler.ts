@@ -1,6 +1,6 @@
 // Amostragem da imagem em grade de células: luminância, tom, bordas, dither e máscara de fundo.
 import type { Grid, Params } from './types';
-import { applyTone, backgroundMask, ditherOrdered, fillLuminance, mixEdges, sobel } from './tone';
+import { applyTone, autoBackgroundMask, backgroundMask, ditherOrdered, fillLuminance, mixEdges, sobel } from './tone';
 
 type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -10,6 +10,7 @@ let scratch: AnyCanvas | null = null;
 let scratchCtx: Ctx2D | null = null;
 let image: ImageData | null = null;
 let edgeBuf = new Float32Array(0);
+let bgQueue = new Int32Array(0);
 
 /** Número de linhas para a imagem srcW×srcH com `cols` colunas e proporção de célula (largura/altura). */
 export function rowsFor(cols: number, srcW: number, srcH: number, cellAspect: number): number {
@@ -71,6 +72,10 @@ export function buildGrid(src: CanvasImageSource, srcW: number, srcH: number, pa
 
   fillLuminance(image.data, n, g.lum, g.r, g.g, g.b);
   backgroundMask(g.lum, n, params.bgCut, g.mask);
+  if (params.bgAuto) {
+    if (bgQueue.length < n) bgQueue = new Int32Array(n);
+    autoBackgroundMask(g.r, g.g, g.b, cols, rows, params.bgTol, g.mask, bgQueue);
+  }
   applyTone(g.lum, n, params.contrast, params.gamma, params.brightness, params.invert);
 
   if (params.edges > 0) {
@@ -88,4 +93,5 @@ export function disposeSampler(): void {
   scratchCtx = null;
   image = null;
   edgeBuf = new Float32Array(0);
+  bgQueue = new Int32Array(0);
 }

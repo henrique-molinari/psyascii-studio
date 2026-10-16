@@ -115,4 +115,7 @@ body:not(.crt)::after { display: none; }
 .tg-b.on { background: var(--green); color: #000; }
 .ctl { min-height: var(--touch); min-width: 0; max-width: 60%; font: 14px var(--font-ui); color: var(--text); background: var(--bg-0); border: 1px solid var(--green-dim); padding: 0 8px; }
 .sl-n { flex: 1; }
+.hint { margin: 0; font-size: 14px; color: var(--green-dim); }
+.fs-b { min-width: 44px; min-height: 44px; }
+.fs-v { color: var(--text); font-variant-numeric: tabular-nums; }
 .panel .sl input[type=range] { width: 40%; }

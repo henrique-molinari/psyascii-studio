@@ -86,6 +86,61 @@ export function backgroundMask(lum: Float32Array, n: number, cut: number, mask: 
   for (let i = 0; i < n; i++) mask[i] = lum[i] >= th ? 0 : 1;
 }
 
+let abVisited = new Uint8Array(0);
+const abHist = new Uint32Array(256);
+
+function borderMedian(ch: Uint8ClampedArray, cols: number, rows: number): number {
+  abHist.fill(0);
+  let total = 0;
+  for (let x = 0; x < cols; x++) {
+    abHist[ch[x]]++; total++;
+    if (rows > 1) { abHist[ch[(rows - 1) * cols + x]]++; total++; }
+  }
+  for (let y = 1; y < rows - 1; y++) {
+    abHist[ch[y * cols]]++; total++;
+    if (cols > 1) { abHist[ch[y * cols + cols - 1]]++; total++; }
+  }
+  let acc = 0;
+  const half = (total + 1) >> 1;
+  for (let v = 0; v < 256; v++) { acc += abHist[v]; if (acc >= half) return v; }
+  return 255;
+}
+
+/**
+ * Fundo automatico: cor de fundo = mediana das celulas da borda; flood-fill 4-vizinhos a partir da borda
+ * sobre celulas com distancia de cor (ponderada, 0..1) <= tol. Escreve mask=0 no fundo (AND com a mascara
+ * existente). `queue` deve ter ao menos cols*rows posicoes (reutilizavel).
+ */
+export function autoBackgroundMask(
+  r: Uint8ClampedArray, g: Uint8ClampedArray, b: Uint8ClampedArray,
+  cols: number, rows: number, tol: number, mask: Uint8Array, queue: Int32Array,
+): void {
+  const n = cols * rows;
+  if (n <= 0) return;
+  if (abVisited.length < n) abVisited = new Uint8Array(n);
+  const vis = abVisited;
+  vis.fill(0, 0, n);
+  const br = borderMedian(r, cols, rows), bg = borderMedian(g, cols, rows), bb = borderMedian(b, cols, rows);
+  const lim = tol * tol;
+  let head = 0, tail = 0;
+  const push = (i: number): void => {
+    if (vis[i] !== 0) return;
+    const dr = (r[i] - br) / 255, dg = (g[i] - bg) / 255, db = (b[i] - bb) / 255;
+    if (0.3 * dr * dr + 0.59 * dg * dg + 0.11 * db * db <= lim) { vis[i] = 1; queue[tail++] = i; }
+  };
+  for (let x = 0; x < cols; x++) { push(x); push((rows - 1) * cols + x); }
+  for (let y = 1; y < rows - 1; y++) { push(y * cols); push(y * cols + cols - 1); }
+  while (head < tail) {
+    const i = queue[head++];
+    mask[i] = 0;
+    const x = i % cols;
+    if (x > 0) push(i - 1);
+    if (x < cols - 1) push(i + 1);
+    if (i >= cols) push(i - cols);
+    if (i < n - cols) push(i + cols);
+  }
+}
+
 /** RNG seedado mulberry32: retorna função 0..1. */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;

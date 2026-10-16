@@ -11,7 +11,7 @@ function hash(a: number, b: number, c: number): number {
 const rainStage: CellStage = (ctx: FrameCtx) => {
   const f = ctx.params.fx.rain;
   if (!f.on) return;
-  const { cols, rows, lum, glyphOverride, t } = ctx;
+  const { cols, rows, lum, glyphOverride, mask, t } = ctx;
   const seed = ctx.params.seed | 0, mix = ctx.params.mix;
   if (mix < 0.05) return;
   const tail = 6 + f.amt * 16;
@@ -25,6 +25,7 @@ const rainStage: CellStage = (ctx: FrameCtx) => {
       const d = head - y;
       if (d < 0 || d >= tail) continue;
       const i = y * cols + x;
+      if (!mask[i]) continue;
       const k = d < 1 ? 1 : 1 - d / tail;
       const v = (k * (0.35 + 0.65 * f.amt + 0.2)) * mix;
       const cur = lum[i];
@@ -37,12 +38,13 @@ const rainStage: CellStage = (ctx: FrameCtx) => {
 const meltStage: CellStage = (ctx: FrameCtx) => {
   const f = ctx.params.fx.melt;
   if (!f.on) return;
-  const { cols, rows, shift, t } = ctx;
+  const { cols, rows, shift, mask, t } = ctx;
   const a = f.amt * 0.45 * ctx.params.mix;
   const w = t * (0.4 + f.speed * 2.2);
   for (let y = 0; y < rows; y++) {
     const ry = y * 0.28 - w;
     for (let x = 0; x < cols; x++) {
+      if (!mask[y * cols + x]) continue;
       shift[y * cols + x] += a * (Math.sin(ry + x * 0.09) * 0.7 + Math.sin(ry * 0.5 - x * 0.17 + w * 0.3) * 0.3);
     }
   }

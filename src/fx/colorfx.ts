@@ -7,7 +7,7 @@ let copy = new Uint8ClampedArray(0);
 const hueStage: CellStage = (c: FrameCtx) => {
   const f = c.params.fx.hue;
   if (!f.on) return;
-  const d = (c as ColorFrameCtx).colors, n = c.cols * c.rows;
+  const d = (c as ColorFrameCtx).colors, n = c.cols * c.rows, mk = c.mask;
   const a = c.t * (0.3 + f.speed * 3);
   const co = Math.cos(a), si = Math.sin(a);
   // Matriz de rotação de matiz (eixo de luma).
@@ -16,6 +16,7 @@ const hueStage: CellStage = (c: FrameCtx) => {
   const m6 = 0.213 - co * 0.213 - si * 0.787, m7 = 0.715 - co * 0.715 + si * 0.715, m8 = 0.072 + co * 0.928 + si * 0.072;
   const k = Math.min(1, f.amt * 2) * c.params.mix, j = 1 - k;
   for (let i = 0; i < n; i++) {
+    if (!mk[i]) continue;
     const o = i * 4, r = d[o], g = d[o + 1], b = d[o + 2];
     d[o] = r * j + (r * m0 + g * m1 + b * m2) * k;
     d[o + 1] = g * j + (r * m3 + g * m4 + b * m5) * k;
@@ -26,7 +27,7 @@ const hueStage: CellStage = (c: FrameCtx) => {
 const aberrStage: CellStage = (c: FrameCtx) => {
   const f = c.params.fx.aberr;
   if (!f.on) return;
-  const d = (c as ColorFrameCtx).colors, cols = c.cols, rows = c.rows, len = cols * rows * 4;
+  const d = (c as ColorFrameCtx).colors, cols = c.cols, rows = c.rows, len = cols * rows * 4, mk = c.mask;
   if (copy.length !== len) copy = new Uint8ClampedArray(len);
   copy.set(d.subarray(0, len));
   const s = Math.max(1, Math.ceil(f.amt * 5 * (0.6 + 0.4 * Math.sin(c.t * (0.5 + f.speed * 3)))));
@@ -34,7 +35,10 @@ const aberrStage: CellStage = (c: FrameCtx) => {
   for (let y = 0; y < rows; y++) {
     const row = y * cols;
     for (let x = 0; x < cols; x++) {
-      const xr = x + s < cols ? x + s : cols - 1, xb = x - s >= 0 ? x - s : 0;
+      if (!mk[row + x]) continue;
+      let xr = x + s < cols ? x + s : cols - 1, xb = x - s >= 0 ? x - s : 0;
+      if (!mk[row + xr]) xr = x;
+      if (!mk[row + xb]) xb = x;
       const o = (row + x) * 4;
       d[o] = copy[o] * j + copy[(row + xr) * 4] * k;
       d[o + 2] = copy[o + 2] * j + copy[(row + xb) * 4 + 2] * k;

@@ -107,7 +107,7 @@ describe('params', () => {
     const p = clampParams({ cols: 99999, cellAspect: -5, contrast: 50, gamma: 0, brightness: -9, fontSize: 1, kaleidoN: 100, mix: 2 } as never);
     expect(p.cols).toBe(LIMITS.cols[1]); expect(p.cellAspect).toBe(LIMITS.cellAspect[0]);
     expect(p.contrast).toBe(2); expect(p.gamma).toBe(0.3); expect(p.brightness).toBe(-1);
-    expect(p.fontSize).toBe(8); expect(p.kaleidoN).toBe(12); expect(p.mix).toBe(1);
+    expect(p.fontSize).toBe(6); expect(p.kaleidoN).toBe(12); expect(p.mix).toBe(1);
   });
   it('clampParams com lixo', () => {
     for (const bad of [null, undefined, 5, 'x', [], { cols: NaN, charset: 'nope', palette: 3, fx: 'a', post: null, seed: 'z', invert: 'true' }]) {

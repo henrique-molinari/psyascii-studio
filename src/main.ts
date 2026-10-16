@@ -2,7 +2,7 @@
 import './style.css';
 import { AsciiRenderer } from './core/renderer';
 import { createLoop } from './core/loop';
-import { defaultParams } from './core/types';
+import { defaultParams, stepFont } from './core/types';
 import { createStore } from './ui/store';
 import { createPanel } from './ui/panel';
 import { randomizeParams } from './ui/presets';
@@ -164,6 +164,10 @@ const unsubStore = store.subscribe((p) => {
 const view = createViewport($('vp'), canvas, () => { /* zoom só afeta a transformação */ }, () => store.get().interact === 'off');
 const shortcuts = createShortcuts({
   togglePause, undo: () => store.undo(), redo: () => store.redo(),
+  fontStep: (d) => {
+    const patch = stepFont(store.get(), d);
+    if (patch) { store.set(patch); store.commit(); }
+  },
   randomize: () => applyParams(randomizeParams(store.get(), (Math.random() * 4294967296) >>> 0)),
   exportPng: () => { if (needImage()) void exportPng(renderer, 1).then(() => say('OK: PNG 1x exportado'), () => say('ERRO: falha ao exportar PNG', true)); },
 });

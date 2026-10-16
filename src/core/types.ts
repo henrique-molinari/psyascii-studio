@@ -23,7 +23,7 @@ export interface FxState { on: boolean; amt: number; speed: number }
 
 export interface Params {
   cols: number; cellAspect: number; contrast: number; gamma: number; brightness: number;
-  invert: boolean; edges: number; dither: boolean; bgCut: number;
+  invert: boolean; edges: number; dither: boolean; bgCut: number; bgAuto: boolean; bgTol: number;
   charset: CharsetId; custom: string; fontSize: number; fontFamily: FontFamilyId;
   colorMode: ColorMode; palette: PaletteId; hueSpeed: number;
   fx: Record<EffectId, FxState>; mix: number;
@@ -34,7 +34,7 @@ export interface Params {
 // Limites [min, max, padrão] das numéricas.
 export const LIMITS = {
   cols: [20, 300, 160], cellAspect: [0.3, 1, 0.5], contrast: [0, 2, 1], gamma: [0.3, 3, 1],
-  brightness: [-1, 1, 0], edges: [0, 1, 0], bgCut: [0, 1, 0], fontSize: [8, 24, 12],
+  brightness: [-1, 1, 0], edges: [0, 1, 0], bgCut: [0, 1, 0], bgTol: [0, 1, 0.25], fontSize: [6, 48, 12],
   hueSpeed: [0, 1, 0.2], mix: [0, 1, 1], kaleidoN: [2, 12, 6], interactRadius: [2, 40, 12],
 } as const;
 export const MAX_IMAGE_PX = 2048;
@@ -61,6 +61,9 @@ export interface Pipeline {
   resize(cols: number, rows: number): void; dispose(): void;
 }
 
+/** true quando o fundo e removido (celulas mask=0 ficam transparentes e sem efeitos). */
+export function bgRemoved(p: Params): boolean { return p.bgAuto || p.bgCut > 0; }
+
 const fx = (on = false, amt = 0.5, speed = 0.5): FxState => ({ on, amt, speed });
 
 export function defaultParams(): Params {
@@ -71,7 +74,7 @@ export function defaultParams(): Params {
   for (const id of POST_IDS) p[id] = fx(id === 'vignette', 0.5, 0.5);
   return {
     cols: L.cols[2], cellAspect: L.cellAspect[2], contrast: L.contrast[2], gamma: L.gamma[2],
-    brightness: L.brightness[2], invert: false, edges: L.edges[2], dither: false, bgCut: L.bgCut[2],
+    brightness: L.brightness[2], invert: false, edges: L.edges[2], dither: false, bgCut: L.bgCut[2], bgAuto: false, bgTol: L.bgTol[2],
     charset: 'classic', custom: '', fontSize: L.fontSize[2], fontFamily: 'mono',
     colorMode: 'mono', palette: 'fosforo-verde', hueSpeed: L.hueSpeed[2],
     fx: f, mix: L.mix[2], post: p, kaleidoN: L.kaleidoN[2], interact: 'off',
@@ -113,7 +116,7 @@ export function clampParams(input: Partial<Params>): Params {
   return {
     cols: Math.round(num(i.cols, L.cols)), cellAspect: num(i.cellAspect, L.cellAspect),
     contrast: num(i.contrast, L.contrast), gamma: num(i.gamma, L.gamma), brightness: num(i.brightness, L.brightness),
-    invert: i.invert === true, edges: num(i.edges, L.edges), dither: i.dither === true, bgCut: num(i.bgCut, L.bgCut),
+    invert: i.invert === true, edges: num(i.edges, L.edges), dither: i.dither === true, bgCut: num(i.bgCut, L.bgCut), bgAuto: i.bgAuto === true, bgTol: num(i.bgTol, L.bgTol),
     charset: oneOf(i.charset, CHARSETS, d.charset), custom: sanitizeCustom(i.custom),
     fontSize: Math.round(num(i.fontSize, L.fontSize)), fontFamily: oneOf(i.fontFamily, FONT_FAMILIES, d.fontFamily),
     colorMode: oneOf(i.colorMode, COLOR_MODES, d.colorMode), palette: oneOf(i.palette, PALETTE_IDS, d.palette),
@@ -121,4 +124,13 @@ export function clampParams(input: Partial<Params>): Params {
     kaleidoN: Math.round(num(i.kaleidoN, L.kaleidoN)), interact: oneOf(i.interact, INTERACT_MODES, d.interact),
     interactRadius: num(i.interactRadius, L.interactRadius), seed,
   };
+}
+
+/** Muda o tamanho do glifo mantendo o tamanho da imagem: mais fonte = menos colunas. */
+export function stepFont(p: Params, d: number): Partial<Params> | null {
+  const [mn, mx] = LIMITS.fontSize;
+  const fontSize = Math.max(mn, Math.min(mx, p.fontSize + d));
+  if (fontSize === p.fontSize) return null;
+  const cols = Math.max(LIMITS.cols[0], Math.min(LIMITS.cols[1], Math.round((p.cols * p.fontSize) / fontSize)));
+  return { fontSize, cols };
 }

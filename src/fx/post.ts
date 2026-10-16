@@ -1,5 +1,5 @@
 // Estágios de pós-processamento: assets pré-construídos, sem alocação por quadro.
-import type { FrameCtx, PostStage } from '../core/types';
+import { bgRemoved, type FrameCtx, type PostStage } from '../core/types';
 
 export interface RevealSource { src: CanvasImageSource; w: number; h: number }
 let getRevealSource: (() => RevealSource | null) | null = null;
@@ -31,7 +31,7 @@ const glow: PostStage = {
     g.drawImage(c.canvas, 0, 0, w, h, 0, 0, sw, sh);
     g.globalCompositeOperation = 'source-over';
     c.save();
-    c.globalCompositeOperation = 'lighter';
+    c.globalCompositeOperation = bgRemoved(ctx.params) ? 'source-atop' : 'lighter';
     c.globalAlpha = Math.min(1, s.amt * 0.9);
     c.imageSmoothingEnabled = true;
     c.imageSmoothingQuality = 'high';
@@ -56,6 +56,7 @@ const scan: PostStage = {
       if (!scanPat) return;
     }
     c.save();
+    if (bgRemoved(ctx.params)) c.globalCompositeOperation = 'source-atop';
     c.globalAlpha = Math.min(1, s.amt * 0.55);
     c.fillStyle = scanPat;
     c.fillRect(0, 0, w, h);
@@ -81,6 +82,7 @@ const vignette: PostStage = {
       g.fillRect(0, 0, 256, 256);
     }
     c.save();
+    if (bgRemoved(ctx.params)) c.globalCompositeOperation = 'source-atop';
     c.globalAlpha = Math.min(1, s.amt);
     c.imageSmoothingEnabled = true;
     c.drawImage(vigCv, 0, 0, 256, 256, 0, 0, w, h);
@@ -122,7 +124,7 @@ const grain: PostStage = {
     }
     c.save();
     c.globalAlpha = Math.min(0.2, s.amt * 0.2);
-    c.globalCompositeOperation = 'overlay';
+    c.globalCompositeOperation = bgRemoved(ctx.params) ? 'source-atop' : 'overlay';
     c.translate(gOx, gOy);
     c.fillStyle = grainPat;
     c.fillRect(-gOx, -gOy, w, h);
@@ -140,6 +142,7 @@ const reveal: PostStage = {
     if (!rs) return;
     const r = p.interactRadius * (w / Math.max(1, ctx.cols));
     c.save();
+    if (bgRemoved(p)) c.globalCompositeOperation = 'source-atop';
     c.beginPath();
     c.arc(ctx.ptr.x * w, ctx.ptr.y * h, r, 0, Math.PI * 2);
     c.clip();

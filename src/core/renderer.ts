@@ -3,7 +3,7 @@ import { buildAtlas, ensureFont, type Atlas } from './atlas';
 import { getRamp, RAIN_GLYPHS } from './charsets';
 import { fillCellColors, type ColorFrameCtx } from './color';
 import { buildGrid } from './sampler';
-import type { Grid, Params, Pipeline, Pointer, WarpEffect } from './types';
+import { bgRemoved, type Grid, Params, Pipeline, Pointer, WarpEffect } from './types';
 
 const FAMILY = {
   mono: "'JetBrains Mono', ui-monospace, Consolas, monospace",
@@ -72,7 +72,7 @@ export class AsciiRenderer {
 
   setParams(p: Params): void {
     this.params = p;
-    const key = [p.cols, p.cellAspect, p.contrast, p.gamma, p.brightness, p.invert, p.edges, p.dither, p.bgCut].join('|');
+    const key = [p.cols, p.cellAspect, p.contrast, p.gamma, p.brightness, p.invert, p.edges, p.dither, p.bgCut, p.bgAuto, p.bgTol].join('|');
     if (key !== this.sampKey) { this.sampKey = key; this.srcDirty = true; }
   }
 
@@ -203,8 +203,8 @@ export class AsciiRenderer {
       l = l < 0 ? 0 : l > 1 ? 1 : l;
       lf[i] = l;
       const go = fc.glyphOverride[i];
-      if (go >= 0) idx[i] = nr + (go % this.rainLen);
-      else if (!fc.mask[i]) idx[i] = -1;
+      if (!fc.mask[i]) idx[i] = -1;
+      else if (go >= 0) idx[i] = nr + (go % this.rainLen);
       else idx[i] = Math.round((1 - l) * (nr - 1));
     }
     const img = this.colorImg as ImageData;
@@ -220,7 +220,8 @@ export class AsciiRenderer {
       this.out32 = new Uint32Array(this.out.data.buffer);
     }
     const o32 = this.out32 as Uint32Array, cd = img.data, sp = this.spaceFlag;
-    o32.fill(0xff000000);
+    const bgr = bgRemoved(p);
+    o32.fill(bgr ? 0 : 0xff000000);
     for (let i = 0; i < n; i++) {
       const gi = idx[i];
       if (gi < 0 || sp[gi]) continue;
@@ -232,6 +233,7 @@ export class AsciiRenderer {
         for (let xx = 0; xx < cw; xx++, k++) {
           const av = al[k];
           if (av === 0) continue;
+          if (bgr) { o32[base + xx] = ((av << 24) | (cb << 16) | (cg << 8) | cr) >>> 0; continue; }
           o32[base + xx] = av === 255
             ? (0xff000000 | (cb << 16) | (cg << 8) | cr)
             : (0xff000000 | (((cb * av + 127) / 255 | 0) << 16) | (((cg * av + 127) / 255 | 0) << 8) | ((cr * av + 127) / 255 | 0));
@@ -273,8 +275,10 @@ export class AsciiRenderer {
     out.width = Math.max(1, Math.round(fc.cols * cw)); out.height = Math.max(1, Math.round(fc.rows * ch));
     const c = out.getContext('2d');
     if (!c) return out;
-    c.fillStyle = '#000';
-    c.fillRect(0, 0, out.width, out.height);
+    if (!bgRemoved(p)) {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, out.width, out.height);
+    }
     c.font = `${p.fontSize * s}px ${FAMILY[p.fontFamily]}`;
     c.textAlign = 'center'; c.textBaseline = 'middle';
     const d = img.data;

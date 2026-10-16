@@ -42,6 +42,8 @@ npm run preview    # serve o build de produção localmente
 - `R`: randomiza os parâmetros.
 - `Ctrl+Z` / `Ctrl+Y`: desfazer e refazer.
 - `S`: exporta.
+- `Alt+=` / `Alt+-` (ou `+` / `-`): aumenta ou diminui a fonte (6 a 48 px). Também há botões "A−" e "A+" em [02] CARACTERES.
+- Em [01] IMAGEM, "Retirar fundo (automático)" e "Tolerância do fundo" isolam o sujeito: efeitos só o afetam e o PNG sai transparente.
 
 ## Privacidade
 

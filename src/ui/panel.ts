@@ -1,5 +1,5 @@
 // Painel de controles gerado por tabelas descritoras. Texto só via textContent.
-import { LIMITS, EFFECT_IDS, POST_IDS, CHARSETS, COLOR_MODES, INTERACT_MODES, FONT_FAMILIES, defaultParams, clampParams } from '../core/types';
+import { LIMITS, EFFECT_IDS, POST_IDS, CHARSETS, COLOR_MODES, INTERACT_MODES, FONT_FAMILIES, defaultParams, clampParams, stepFont } from '../core/types';
 import type { Params, FxState, EffectId, PostId } from '../core/types';
 import { PALETTES } from '../core/color';
 import type { Store } from './store';
@@ -17,7 +17,7 @@ type NumKey = keyof typeof LIMITS;
 
 const NUMS: Record<string, [NumKey, string, number][]> = {
   img: [['cols', 'Colunas', 1], ['cellAspect', 'Proporção da célula', 0.01], ['contrast', 'Contraste', 0.05], ['gamma', 'Gama', 0.05], ['brightness', 'Brilho', 0.05], ['edges', 'Bordas (Sobel)', 0.05], ['bgCut', 'Remover fundo claro', 0.05]],
-  chr: [['fontSize', 'Tamanho da fonte', 1]],
+  chr: [],
   col: [['hueSpeed', 'Velocidade do matiz', 0.05]],
 };
 const CHARSET_L: Record<string, string> = { classic: 'Clássico', blocks: 'Blocos', braille: 'Braille', katakana: 'Katakana', binary: 'Binário', custom: 'Personalizado' };
@@ -67,7 +67,7 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
     const c = select(label, opts, (v) => store.set({ [key]: v } as Partial<Params>), commit);
     to.append(c.el); syncs.push((p) => c.set(p[key]));
   };
-  const tog = (to: HTMLElement, key: 'invert' | 'dither', label: string) => {
+  const tog = (to: HTMLElement, key: 'invert' | 'dither' | 'bgAuto', label: string) => {
     const c = toggle(label, (v) => store.set({ [key]: v } as Partial<Params>), commit);
     to.append(c.el); syncs.push((p) => c.set(p[key]));
   };
@@ -91,6 +91,11 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
   const r1 = row(s1); btn(r1, 'Carregar imagem', actions.loadFile); btn(r1, 'Imagem de exemplo', actions.sample);
   if (actions.loadVideo) btn(r1, 'Carregar vídeo', actions.loadVideo);
   for (const [k, l, st] of NUMS.img) num(s1, k, l, st);
+  tog(s1, 'bgAuto', 'Retirar fundo (automático)');
+  num(s1, 'bgTol', 'Tolerância do fundo', 0.01);
+  const hint = document.createElement('p'); hint.className = 'hint';
+  hint.textContent = 'Efeitos afetam só o sujeito; o PNG sai com fundo transparente.';
+  s1.append(hint);
   tog(s1, 'invert', 'Inverter'); tog(s1, 'dither', 'Dither');
   // [02] CARACTERES
   const s2 = section('[02] CARACTERES', true);
@@ -98,7 +103,21 @@ export function createPanel(root: HTMLElement, store: Store, actions: PanelActio
   const cu = textInput('Caracteres personalizados', 64, (v) => store.set({ custom: v }), commit);
   s2.append(cu.el); syncs.push((p) => cu.set(p.custom));
   sel(s2, 'fontFamily', 'Fonte', FONT_FAMILIES.map((f) => ({ value: f, label: f === 'mono' ? 'Monoespaçada' : 'Kana (DotGothic16)' })));
-  for (const [k, l, st] of NUMS.chr) num(s2, k, l, st);
+  const rf = row(s2); rf.classList.add('fs-row');
+  const step = (d: number, label: string, text: string) => {
+    const b = button(text, () => {
+      const patch = stepFont(store.get(), d);
+      if (patch) { store.set(patch); commit(); }
+    });
+    b.el.setAttribute('aria-label', label); b.el.classList.add('fs-b'); rf.append(b.el); return b.el as HTMLButtonElement;
+  };
+  const bMinus = step(-1, 'Diminuir fonte', 'A−'), bPlus = step(1, 'Aumentar fonte', 'A+');
+  const fsOut = document.createElement('output'); fsOut.className = 'fs-v'; fsOut.setAttribute('aria-live', 'polite');
+  rf.append(fsOut);
+  syncs.push((p) => {
+    fsOut.textContent = p.fontSize + ' px';
+    bMinus.disabled = p.fontSize <= LIMITS.fontSize[0]; bPlus.disabled = p.fontSize >= LIMITS.fontSize[1];
+  });
   // [03] COR
   const s3 = section('[03] COR', true);
   sel(s3, 'colorMode', 'Modo de cor', COLOR_MODES.map((c) => ({ value: c, label: MODE_L[c] })));

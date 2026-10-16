@@ -5,6 +5,7 @@ export interface ShortcutActions {
   undo(): void;
   redo(): void;
   exportPng(): void;
+  fontStep(delta: 1 | -1): void;
 }
 
 function editing(t: EventTarget | null): boolean {
@@ -29,6 +30,10 @@ export function createShortcuts(a: ShortcutActions): { dispose(): void } {
       else if (k === 'y') { e.preventDefault(); a.redo(); }
       return;
     }
+    // Fonte: Alt+= / Alt+- ou + / - sem modificadores.
+    const plus = k === '+' || k === '=' || e.code === 'Equal' || e.code === 'NumpadAdd';
+    const minus = k === '-' || e.code === 'Minus' || e.code === 'NumpadSubtract';
+    if ((plus || minus) && !mod) { e.preventDefault(); a.fontStep(plus ? 1 : -1); return; }
     if (e.altKey) return;
     // Em botões, espaço/Enter pertencem ao botão.
     if (k === ' ' || k === 'spacebar') {
