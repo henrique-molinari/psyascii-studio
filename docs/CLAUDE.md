@@ -17,7 +17,7 @@ Construir, em UMA ÚNICA RODADA AUTÔNOMA, uma ferramenta web que converte image
 Vite + TypeScript, DOM puro (sem framework de UI), Canvas 2D (WebGL só como pós-processamento opcional, com fallback), Vitest para funções puras. Dependências mínimas.
 
 ## Estilo visual: TERMINAL / CHUVA DIGITAL (obrigatório em toda a UI)
-Tokens (CSS custom properties em src/ui/tokens.css):
+Tokens (CSS custom properties em web/ui/tokens.css):
 - Fundos: --bg-0 #000000, --bg-1 #030d07, --bg-2 #061a0f. Linhas: --line #0f3d22.
 - Verdes: --green #00ff41 (fósforo, ação e destaque), --green-dim #2fbf5a (texto secundário), --green-dark #0a5c2a, --head #d6ffe0 (cabeça brilhante da chuva).
 - Alerta/erro/sucesso: --amber #ffb000 (aviso), --red #ff4d4d (erro). Texto principal --text #b8ffc9. Contraste mínimo AA em todo texto.
@@ -29,7 +29,7 @@ Componentes:
 - O canvas fica em moldura de terminal, com título de janela e indicador de FPS opcional.
 Nomes das seções (sempre com rótulo claro): [01] IMAGEM, [02] CARACTERES, [03] COR, [04] EFEITOS, [05] PÓS, [06] EXPORTAR, [07] RECEITAS.
 Paletas psicodélicas com nomes originais: Fósforo Verde, Âmbar CRT, Ciano Térmico, Magenta Neon, Ácido Roxo, Infravermelho, Arco-íris Corrompido, Duotone Verde e Preto, Calor, Aurora Digital, Sinal Perdido, Glitch RGB. Presets com nomes originais (ex.: Chuva Verde, Eco do Servidor, Código Ácido).
-ANIMAÇÃO DE ABERTURA (obrigatória, P0), módulo único RainEngine (src/fx/rain.ts) reutilizado como efeito "Chuva digital", como fundo ambiente e como abertura:
+ANIMAÇÃO DE ABERTURA (obrigatória, P0), módulo único RainEngine (api/fx/rain.ts) reutilizado como efeito "Chuva digital", como fundo ambiente e como abertura:
 - Ao abrir o site: tela preta e colunas de caracteres (Katakana, dígitos e símbolos) caindo em velocidades diferentes, com rastro que se apaga, cabeça mais clara (--head) e troca aleatória de glifos. Duração ~3,5 s, enquanto o app carrega por trás.
 - Sequência: chuva cobre a tela -> linhas de boot digitadas sobre ela ("> inicializando PsyASCII Studio...", "> carregando módulos...", "> pronto") -> as colunas "esvaziam" de cima para baixo revelando a interface com fade e varredura de scanline.
 - Primeira visita: o aviso de fotossensibilidade aparece sobre a chuva com botão [ ENTRAR ]; ao clicar, toca a sequência final. Visitas seguintes: abertura automática. Botão "Pular" visível e tecla Esc/clique em qualquer momento; opção "Animação de abertura" em Configurações. Nunca bloqueia o uso por mais de ~4 s.

@@ -1,4 +1,4 @@
-# DESIGN.md - PsyASCII Studio (terminal / chuva digital). Tokens: src/ui/tokens.css
+# DESIGN.md - PsyASCII Studio (terminal / chuva digital). Tokens: web/ui/tokens.css
 
 ## Layout
 - Desktop (>=900px): `body{display:grid;grid-template-columns:340px 1fr;height:100dvh}`. Aside rolável (scroll fino), `<main>` centraliza a moldura do canvas com `padding:16px`.

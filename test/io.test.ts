@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { encodeRecipe, decodeRecipe, sanitizeName, hashFromRecipe, recipeFromHash, saveLocal, loadLocal, deleteLocal, listLocal } from '../src/io/recipes';
-import { defaultParams, clampParams } from '../src/core/types';
-import { RainEngine } from '../src/fx/rain';
+import { encodeRecipe, decodeRecipe, sanitizeName, hashFromRecipe, recipeFromHash, saveLocal, loadLocal, deleteLocal, listLocal } from '../api/io/recipes';
+import { defaultParams, clampParams } from '../api/core/types';
+import { RainEngine } from '../api/fx/rain';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 

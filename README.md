@@ -14,12 +14,13 @@ npm run preview    # serve o build de produção localmente
 
 ## Estrutura de pastas
 
-- `src/core`: tipos, tom/luminância, charsets, atlas de glifos, amostragem, cor, renderer e loop.
-- `src/fx`: chuva digital (`rain.ts`), efeitos de distorção, feedback, caracteres, pós-processamento e cor; `index.ts` monta o pipeline.
-- `src/io`: entrada de arquivos, exportação (PNG/TXT/HTML), WebM, vídeo de entrada e receitas.
-- `src/ui`: store de estado com undo/redo, painéis, controles, abertura, atalhos, presets e preferências.
-- `src/assets/fonts`: subset de fonte com katakana (U+3041-30FE).
-- `tests/`: testes das funções puras (núcleo e exportação).
+- `api/core`: tipos, tom/luminância, charsets, atlas de glifos, amostragem, cor, renderer e loop.
+- `api/fx`: chuva digital (`rain.ts`), efeitos de distorção, feedback, caracteres, pós-processamento e cor; `index.ts` monta o pipeline.
+- `api/io`: entrada de arquivos, exportação (PNG/TXT/HTML), WebM, vídeo de entrada e receitas.
+- `api/state`: store de estado com undo/redo, presets e preferências.
+- `web`: index.html, main.ts, estilos e `ui/` (painéis, controles, abertura, atalhos, presets e preferências.
+- `web/assets/fonts`: subset de fonte com katakana (U+3041-30FE).
+- `test/`: testes das funções puras (núcleo e exportação).
 - `CLAUDE.md` e `PROGRESS.md`: contratos do projeto e registro de fases e decisões.
 
 ## Recursos

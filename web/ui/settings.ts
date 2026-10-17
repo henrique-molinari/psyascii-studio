@@ -1,6 +1,6 @@
 // Configurações: toggles [ ON ]/[ OFF ] ligados às preferências + "rever abertura".
 import { toggle, button } from './controls';
-import type { Prefs } from './prefs';
+import type { Prefs } from '../../api/state/prefs';
 
 export interface PrefsApi {
   getPrefs(): Prefs;

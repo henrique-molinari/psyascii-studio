@@ -1,28 +1,28 @@
 // Ligação principal: store + renderer + loop + entrada + painel + abertura.
 import './style.css';
-import { AsciiRenderer } from './core/renderer';
-import { createLoop } from './core/loop';
-import { defaultParams, stepFont } from './core/types';
-import { createStore } from './ui/store';
+import { AsciiRenderer } from '../api/core/renderer';
+import { createLoop } from '../api/core/loop';
+import { defaultParams, stepFont } from '../api/core/types';
+import { createStore } from '../api/state/store';
 import { createPanel } from './ui/panel';
-import { randomizeParams } from './ui/presets';
-import { getPrefs, setPrefs, subscribe as subPrefs, reducedMotion } from './ui/prefs';
+import { randomizeParams } from '../api/state/presets';
+import { getPrefs, setPrefs, subscribe as subPrefs, reducedMotion } from '../api/state/prefs';
 import { runIntro } from './ui/intro';
 import { createAmbient } from './ui/ambient';
 import { mountSettings } from './ui/settings';
 import { createViewport } from './ui/viewport';
 import { createShortcuts } from './ui/shortcuts';
-import { setupInput } from './io/input';
-import type { LoadedImage } from './io/input';
-import { exportPng, exportTxt, copyText } from './io/export';
-import { exportHtml } from './io/exportHtml';
-import { recordWebm, webmSupported } from './io/webm';
-import type { WebmHandle } from './io/webm';
-import { loadVideoFile, openVideoPicker, videoSupported } from './io/video';
-import type { LoadedVideo } from './io/video';
-import { MAX_RECIPES, sanitizeName, recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from './io/recipes';
-import { createPipeline } from './fx';
-import { setRevealSource } from './fx/post';
+import { setupInput } from '../api/io/input';
+import type { LoadedImage } from '../api/io/input';
+import { exportPng, exportTxt, copyText } from '../api/io/export';
+import { exportHtml } from '../api/io/exportHtml';
+import { recordWebm, webmSupported } from '../api/io/webm';
+import type { WebmHandle } from '../api/io/webm';
+import { loadVideoFile, openVideoPicker, videoSupported } from '../api/io/video';
+import type { LoadedVideo } from '../api/io/video';
+import { MAX_RECIPES, sanitizeName, recipeFromHash, shareUrl, saveLocal, loadLocal, deleteLocal, listLocal } from '../api/io/recipes';
+import { createPipeline } from '../api/fx';
+import { setRevealSource } from '../api/fx/post';
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
