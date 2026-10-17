@@ -86,11 +86,15 @@ body:not(.crt)::after { display: none; }
 
 @media (max-width: 899px) {
   .bar { padding: 8px; }
-  main { padding: 8px; }
+  main { padding: 8px; flex-direction: column; gap: 8px; overflow: hidden; }
   .drawer-btn { display: inline-block; }
-  .side { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; height: 62dvh; transform: translateY(100%); visibility: hidden; transition: transform .25s, visibility .25s; box-shadow: 0 -4px 24px #000; }
-  .side.open { transform: none; visibility: visible; }
-  #cv { max-height: calc(100dvh - 130px); }
+  .frame { flex: 0 1 auto; align-self: center; }
+  /* Painel ocupa a metade inferior (sem sobrepor): a imagem fica visível acima. */
+  .side { display: none; flex: 0 0 46dvh; height: 46dvh; width: 100%; }
+  .side.open { display: flex; }
+  #app:has(.side.open) { --side-h: calc(46dvh + 8px); }
+  #cv { max-height: calc(100dvh - 130px - var(--side-h, 0px)); }
+  .msg { bottom: auto; top: 64px; }
   .title .btn { min-height: var(--touch); min-width: var(--touch); }
   .title { min-height: var(--touch); }
   .title > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
