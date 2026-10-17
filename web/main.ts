@@ -58,7 +58,14 @@ const hash = location.hash;
 const fromHash = recipeFromHash(hash);
 if (/^#r=/.test(hash) && !fromHash) startupWarn = 'ERRO: receita do link inválida (usando padrão)';
 const initial = fromHash ?? defaultParams();
-if (!fromHash) { initial.fx.rain = { on: true, amt: 0.7, speed: 0.5 }; initial.fontFamily = 'kana'; initial.charset = 'katakana'; initial.colorMode = 'mono'; initial.palette = 'fosforo-verde'; }
+/** Parâmetros da imagem de exemplo: chuva verde Katakana. */
+function matrixParams(): ReturnType<typeof defaultParams> {
+  const p = defaultParams();
+  p.fx.rain = { on: true, amt: 0.7, speed: 0.5 };
+  p.fontFamily = 'kana'; p.charset = 'katakana';
+  return p;
+}
+if (!fromHash) Object.assign(initial, matrixParams());
 const store = createStore(initial);
 const ptr = { x: 0, y: 0, down: false, active: false };
 let hasImage = false, curSource: CanvasImageSource | null = null, lastT = 0;
@@ -79,7 +86,12 @@ function setImage(img: LoadedImage, video?: LoadedVideo): void {
   renderOnce();
   say('OK: imagem carregada');
 }
-const input = setupInput({ dropTarget: document.body, onImage: setImage, onError: (m) => say(m, true) });
+// Imagem nova do usuário chega sem edição nenhuma (parâmetros padrão).
+function setNewImage(img: LoadedImage, video?: LoadedVideo): void {
+  store.set(defaultParams()); store.commit();
+  setImage(img, video);
+}
+const input = setupInput({ dropTarget: document.body, onImage: setNewImage, onError: (m) => say(m, true) });
 
 // FPS opcional (atualiza a cada 0,5 s).
 let frames = 0, fpsT = 0;
@@ -128,7 +140,7 @@ function doHtml(): void {
 function doVideo(): void {
   if (!videoSupported()) { say('ERRO: vídeo indisponível neste navegador', true); return; }
   openVideoPicker((f) => {
-    loadVideoFile(f).then((v) => { setImage(v, v); say('OK: vídeo carregado (local, sem áudio)'); }, (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao carregar vídeo', true));
+    loadVideoFile(f).then((v) => { setNewImage(v, v); say('OK: vídeo carregado (local, sem áudio)'); }, (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao carregar vídeo', true));
   });
 }
 
@@ -143,7 +155,7 @@ async function copyLink(): Promise<void> {
 
 const panel = createPanel(side, store, {
   loadFile: () => input.openPicker(),
-  sample: () => setImage(input.loadSample()),
+  sample: () => { store.set(matrixParams()); store.commit(); setImage(input.loadSample()); },
   exportPng: (s) => { if (needImage()) exportPng(renderer, s).then(() => say(`OK: PNG ${s}x exportado`), (e: unknown) => say(e instanceof Error && e.message.startsWith('ERRO') ? e.message : 'ERRO: falha ao exportar PNG', true)); },
   exportTxt: () => { if (needImage()) { exportTxt(renderer); say('OK: TXT exportado'); } },
   copyText: () => { if (needImage()) void copyText(renderer).then((ok) => say(ok ? 'OK: texto copiado' : 'ERRO: não foi possível copiar', !ok)); },
