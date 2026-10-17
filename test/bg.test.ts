@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoBackgroundMask } from '../api/core/tone';
+import { autoBackgroundMask } from '../lib/core/tone';
 
 function img(cols: number, rows: number, bg: number, fg: number, inner?: [number, number, number, number]) {
   const n = cols * rows;

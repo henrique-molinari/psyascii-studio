@@ -1,12 +1,12 @@
 // Painel de controles gerado por tabelas descritoras. Texto só via textContent.
-import { LIMITS, EFFECT_IDS, POST_IDS, CHARSETS, COLOR_MODES, INTERACT_MODES, FONT_FAMILIES, defaultParams, clampParams, stepFont } from '../../api/core/types';
-import type { Params, FxState, EffectId, PostId } from '../../api/core/types';
-import { PALETTES } from '../../api/core/color';
-import type { Store } from '../../api/state/store';
+import { LIMITS, EFFECT_IDS, POST_IDS, CHARSETS, COLOR_MODES, INTERACT_MODES, FONT_FAMILIES, defaultParams, clampParams, stepFont } from '../../lib/core/types';
+import type { Params, FxState, EffectId, PostId } from '../../lib/core/types';
+import { PALETTES } from '../../lib/core/color';
+import type { Store } from '../../lib/state/store';
 import { slider, toggle, select, textInput, button } from './controls';
 import type { Opt } from './controls';
-import { PRESETS } from '../../api/state/presets';
-import { getPrefs } from '../../api/state/prefs';
+import { PRESETS } from '../../lib/state/presets';
+import { getPrefs } from '../../lib/state/prefs';
 
 export interface PanelActions {
   loadFile(): void; sample(): void; exportPng(scale: 1 | 2 | 4): void; exportTxt(): void; copyText(): void;

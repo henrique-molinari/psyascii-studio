@@ -1,8 +1,8 @@
 // Abertura: aviso de fotossensibilidade (1ª visita) + chuva + boot digitado + revelação.
-import { RainEngine } from '../../api/fx/rain';
+import { RainEngine } from '../../lib/fx/rain';
 import { typeText } from './typing';
 import type { TypeHandle } from './typing';
-import { getPrefs, setPrefs } from '../../api/state/prefs';
+import { getPrefs, setPrefs } from '../../lib/state/prefs';
 import './intro.css';
 
 const LINES = ['> inicializando PsyASCII Studio...', '> carregando módulos...', '> pronto'];

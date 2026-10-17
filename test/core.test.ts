@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { luminance, toneCurve, mulberry32, hash2d, bayer4, backgroundMask } from '../api/core/tone';
-import { getRamp, RAIN_GLYPHS } from '../api/core/charsets';
-import { CHARSETS, PALETTE_IDS, MAX_CUSTOM_CHARS, LIMITS, sanitizeCustom, defaultParams, clampParams } from '../api/core/types';
-import { paletteColor } from '../api/core/color';
+import { luminance, toneCurve, mulberry32, hash2d, bayer4, backgroundMask } from '../lib/core/tone';
+import { getRamp, RAIN_GLYPHS } from '../lib/core/charsets';
+import { CHARSETS, PALETTE_IDS, MAX_CUSTOM_CHARS, LIMITS, sanitizeCustom, defaultParams, clampParams } from '../lib/core/types';
+import { paletteColor } from '../lib/core/color';
 
 describe('tone', () => {
   it('luminance extremos e monotonia', () => {

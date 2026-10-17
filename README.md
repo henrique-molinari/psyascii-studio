@@ -14,10 +14,10 @@ npm run preview    # serve o build de produção localmente
 
 ## Estrutura de pastas
 
-- `api/core`: tipos, tom/luminância, charsets, atlas de glifos, amostragem, cor, renderer e loop.
-- `api/fx`: chuva digital (`rain.ts`), efeitos de distorção, feedback, caracteres, pós-processamento e cor; `index.ts` monta o pipeline.
-- `api/io`: entrada de arquivos, exportação (PNG/TXT/HTML), WebM, vídeo de entrada e receitas.
-- `api/state`: store de estado com undo/redo, presets e preferências.
+- `lib/core`: tipos, tom/luminância, charsets, atlas de glifos, amostragem, cor, renderer e loop.
+- `lib/fx`: chuva digital (`rain.ts`), efeitos de distorção, feedback, caracteres, pós-processamento e cor; `index.ts` monta o pipeline.
+- `lib/io`: entrada de arquivos, exportação (PNG/TXT/HTML), WebM, vídeo de entrada e receitas.
+- `lib/state`: store de estado com undo/redo, presets e preferências.
 - `web`: index.html, main.ts, estilos e `ui/` (painéis, controles, abertura, atalhos).
 - `web/assets/fonts`: subset de fonte com katakana (U+3041-30FE).
 - `test/`: testes das funções puras (núcleo e exportação).

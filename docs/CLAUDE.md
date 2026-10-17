@@ -29,7 +29,7 @@ Componentes:
 - O canvas fica em moldura de terminal, com título de janela e indicador de FPS opcional.
 Nomes das seções (sempre com rótulo claro): [01] IMAGEM, [02] CARACTERES, [03] COR, [04] EFEITOS, [05] PÓS, [06] EXPORTAR, [07] RECEITAS.
 Paletas psicodélicas com nomes originais: Fósforo Verde, Âmbar CRT, Ciano Térmico, Magenta Neon, Ácido Roxo, Infravermelho, Arco-íris Corrompido, Duotone Verde e Preto, Calor, Aurora Digital, Sinal Perdido, Glitch RGB. Presets com nomes originais (ex.: Chuva Verde, Eco do Servidor, Código Ácido).
-ANIMAÇÃO DE ABERTURA (obrigatória, P0), módulo único RainEngine (api/fx/rain.ts) reutilizado como efeito "Chuva digital", como fundo ambiente e como abertura:
+ANIMAÇÃO DE ABERTURA (obrigatória, P0), módulo único RainEngine (lib/fx/rain.ts) reutilizado como efeito "Chuva digital", como fundo ambiente e como abertura:
 - Ao abrir o site: tela preta e colunas de caracteres (Katakana, dígitos e símbolos) caindo em velocidades diferentes, com rastro que se apaga, cabeça mais clara (--head) e troca aleatória de glifos. Duração ~3,5 s, enquanto o app carrega por trás.
 - Sequência: chuva cobre a tela -> linhas de boot digitadas sobre ela ("> inicializando PsyASCII Studio...", "> carregando módulos...", "> pronto") -> as colunas "esvaziam" de cima para baixo revelando a interface com fade e varredura de scanline.
 - Primeira visita: o aviso de fotossensibilidade aparece sobre a chuva com botão [ ENTRAR ]; ao clicar, toca a sequência final. Visitas seguintes: abertura automática. Botão "Pular" visível e tecla Esc/clique em qualquer momento; opção "Animação de abertura" em Configurações. Nunca bloqueia o uso por mais de ~4 s.

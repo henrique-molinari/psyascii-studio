@@ -1,6 +1,6 @@
 // Fundo ambiente: RainEngine a baixa opacidade atrás dos painéis.
-import { RainEngine } from '../../api/fx/rain';
-import { reducedMotion, subscribe, getPrefs } from '../../api/state/prefs';
+import { RainEngine } from '../../lib/fx/rain';
+import { reducedMotion, subscribe, getPrefs } from '../../lib/state/prefs';
 import './intro.css';
 
 export function createAmbient(container: HTMLElement): { setEnabled(b: boolean): void; dispose(): void } {
