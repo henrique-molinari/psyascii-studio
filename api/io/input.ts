@@ -87,25 +87,30 @@ export async function decodeFile(file: File): Promise<LoadedImage> {
   return { source: c, w, h };
 }
 
-/** Imagem de exemplo gerada por código (gradientes, formas e círculos). */
+/** Imagem de exemplo "Matrix": palavra sobre chuva digital verde, gerada por código. */
 export function generateSample(): LoadedImage {
   const w = 640, h = 400;
   const c = makeCanvas(w, h);
   const g = c.getContext('2d')!;
-  const bg = g.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, '#0b1e3a'); bg.addColorStop(0.5, '#c0392b'); bg.addColorStop(1, '#f4d03f');
-  g.fillStyle = bg; g.fillRect(0, 0, w, h);
-  const sun = g.createRadialGradient(w * 0.5, h * 0.45, 4, w * 0.5, h * 0.45, h * 0.38);
-  sun.addColorStop(0, '#ffffff'); sun.addColorStop(0.6, '#ffd27a'); sun.addColorStop(1, 'rgba(255,210,122,0)');
-  g.fillStyle = sun; g.fillRect(0, 0, w, h);
-  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 6;
-  for (let i = 1; i <= 5; i++) { g.beginPath(); g.arc(w * 0.5, h * 0.45, i * 32, 0, Math.PI * 2); g.stroke(); }
-  g.fillStyle = '#000';
-  g.beginPath(); g.moveTo(0, h);
-  for (let x = 0; x <= w; x += 20) g.lineTo(x, h * 0.78 - Math.abs(Math.sin(x * 0.021)) * 70);
-  g.lineTo(w, h); g.closePath(); g.fill();
-  g.fillStyle = '#fff'; g.fillRect(40, 40, 90, 90);
-  g.fillStyle = '#000'; g.fillRect(60, 60, 50, 50);
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  const glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ0123456789:.=*+-<>';
+  let s = 7;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  g.font = '16px monospace'; g.textAlign = 'center'; g.textBaseline = 'top';
+  for (let x = 8; x < w; x += 16) {
+    const len = 8 + Math.floor(rnd() * 18), y0 = Math.floor(rnd() * h) - len * 16;
+    for (let i = 0; i < len; i++) {
+      const y = y0 + i * 16;
+      if (y < -16 || y > h) continue;
+      const k = (i + 1) / len;
+      g.fillStyle = i === len - 1 ? '#d6ffe0' : `rgba(0,255,65,${(0.15 + 0.85 * k * k).toFixed(2)})`;
+      g.fillText(glyphs[Math.floor(rnd() * glyphs.length)], x, y);
+    }
+  }
+  g.font = 'bold 120px monospace'; g.textBaseline = 'middle';
+  g.shadowColor = '#000'; g.shadowBlur = 36;
+  g.fillStyle = '#000'; for (let i = 0; i < 4; i++) g.fillText('MATRIX', w / 2, h / 2);
+  g.shadowBlur = 0; g.fillStyle = '#eaffee'; g.fillText('MATRIX', w / 2, h / 2);
   return { source: c, w, h };
 }
 

@@ -57,7 +57,9 @@ setRevealSource(() => renderer.getSource());
 const hash = location.hash;
 const fromHash = recipeFromHash(hash);
 if (/^#r=/.test(hash) && !fromHash) startupWarn = 'ERRO: receita do link inválida (usando padrão)';
-const store = createStore(fromHash ?? defaultParams());
+const initial = fromHash ?? defaultParams();
+if (!fromHash) { initial.fx.rain = { on: true, amt: 0.7, speed: 0.5 }; initial.fontFamily = 'kana'; initial.charset = 'katakana'; initial.colorMode = 'mono'; initial.palette = 'fosforo-verde'; }
+const store = createStore(initial);
 const ptr = { x: 0, y: 0, down: false, active: false };
 let hasImage = false, curSource: CanvasImageSource | null = null, lastT = 0;
 
